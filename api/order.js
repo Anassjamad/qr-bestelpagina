@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
+imimport mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI; // Veilig ophalen uit env variabelen
 
 const connectDB = async () => {
     if (mongoose.connection.readyState === 0) {
@@ -17,15 +17,8 @@ export default function handler(req, res) {
         // Log de bestelling naar de console (optioneel voor debuggen)
         console.log(`Bestelling ontvangen van ${name} (${email}) voor items:`, items);
 
-        // Connect to DB
-        connectDB().then(() => {
-            console.log("Connected to MongoDB");
-        }).catch(err => {
-            console.error("Error connecting to MongoDB", err);
-        });
-
         // Hier kun je de bestelling verwerken, bijvoorbeeld door deze op te slaan in een database
-        // Bestelling opslaan in database
+        // Voor nu sturen we gewoon een succesbericht terug.
 
         res.status(200).json({ message: 'Bestelling ontvangen!' });
     } else {
