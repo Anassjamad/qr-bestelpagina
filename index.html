@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bestelpagina</title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="bg-gray-100 text-gray-900 p-6">
+    <div class="max-w-xl mx-auto">
+        <h1 class="text-3xl font-bold mb-4">Plaats je bestelling</h1>
+        <form class="space-y-4" id="bestel-form">
+            <input type="text" placeholder="Naam" id="naam" class="w-full p-2 border rounded" />
+            <input type="text" placeholder="Bestelling" id="bestelling" class="w-full p-2 border rounded" />
+            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Bestel</button>
+        </form>
+        <div id="bevestiging" class="mt-4 text-green-600 hidden">Bedankt voor je bestelling!</div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+<form id="bestelform">
+    <input type="text" name="item" placeholder="Wat wil je bestellen?" required />
+    <input type="number" name="quantity" value="1" min="1" />
+    <button type="submit">Bestel</button>
+</form>
+
+<script>
+    const form = document.getElementById('bestelform');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const data = {
+            item: formData.get('item'),
+            quantity: parseInt(formData.get('quantity'))
+        };
+
+        const res = await fetch('/api/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        alert(result.message);
+    });
+</script>
