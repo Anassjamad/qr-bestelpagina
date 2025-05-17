@@ -1,47 +1,118 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bestelpagina</title>
-    <link rel="stylesheet" href="/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bestel Systeem</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 32px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        .message {
+            font-size: 1.2em;
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 text-gray-900 p-6">
-    <div class="max-w-xl mx-auto">
-        <h1 class="text-3xl font-bold mb-4">Plaats je bestelling</h1>
-        <form class="space-y-4" id="bestel-form">
-            <input type="text" placeholder="Naam" id="naam" class="w-full p-2 border rounded" />
-            <input type="text" placeholder="Bestelling" id="bestelling" class="w-full p-2 border rounded" />
-            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Bestel</button>
+<body>
+
+    <div class="container">
+        <h2>Bestelling Plaatsen</h2>
+        <form id="orderForm">
+            <label for="item">Item</label>
+            <input type="text" id="item" name="item" required>
+
+            <label for="quantity">Aantal</label>
+            <input type="number" id="quantity" name="quantity" required>
+
+            <label for="opmerking">Opmerking</label>
+            <textarea id="opmerking" name="opmerking"></textarea>
+
+            <button type="submit">Bestelling Plaatsen</button>
         </form>
-        <div id="bevestiging" class="mt-4 text-green-600 hidden">Bedankt voor je bestelling!</div>
+
+        <div id="responseMessage" class="message"></div>
     </div>
-    <script type="module" src="/src/main.js"></script>
+
+    <script>
+        document.getElementById('orderForm').addEventListener('submit', async function (event) {
+            event.preventDefault(); // Voorkom dat de pagina herlaadt
+
+            // Haal de waarden van de invoervelden op
+            const item = document.getElementById('item').value;
+            const quantity = document.getElementById('quantity').value;
+            const opmerking = document.getElementById('opmerking').value;
+
+            // Maak een object voor de body van de request
+            const orderData = {
+                item,
+                quantity,
+                opmerking
+            };
+
+            try {
+                // Verstuur de POST request naar de backend
+                const response = await fetch('http://localhost:5000/order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+
+                // Als de bestelling succesvol is opgeslagen
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('responseMessage').innerHTML = `✅ Bestelling succesvol geplaatst! Order ID: ${result.orderId}`;
+                    document.getElementById('orderForm').reset(); // Reset het formulier
+                } else {
+                    document.getElementById('responseMessage').innerHTML = `<span class="error">${result.message}</span>`;
+                }
+
+            } catch (error) {
+                document.getElementById('responseMessage').innerHTML = `<span class="error">Er is een fout opgetreden. Probeer het opnieuw.</span>`;
+                console.error('Error:', error);
+            }
+        });
+    </script>
+
 </body>
 </html>
-<form id="bestelform">
-    <input type="text" name="item" placeholder="Wat wil je bestellen?" required />
-    <input type="number" name="quantity" value="1" min="1" />
-    <button type="submit">Bestel</button>
-</form>
-
-<script>
-    const form = document.getElementById('bestelform');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(form);
-        const data = {
-            item: formData.get('item'),
-            quantity: parseInt(formData.get('quantity'))
-        };
-
-        const res = await fetch('/api/order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        const result = await res.json();
-        alert(result.message);
-    });
-</script>
