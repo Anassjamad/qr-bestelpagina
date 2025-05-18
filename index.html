@@ -89,7 +89,7 @@
 
             try {
                 // Verstuur de POST request naar de backend
-                const response = await fetch('https://0964-143-179-158-36.ngrok-free.app/order', {
+                const response = await fetch('https://97e5-143-179-158-36.ngrok-free.app/order', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -97,7 +97,7 @@
                     body: JSON.stringify(orderData)
                 });
 
-                // Als de bestelling succesvol is opgeslagen
+                // Controleer of de response succesvol is
                 const result = await response.json();
 
                 if (response.ok) {
