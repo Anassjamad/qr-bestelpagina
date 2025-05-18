@@ -71,6 +71,9 @@
         <div id="responseMessage" class="message"></div>
     </div>
 
+    <!-- Geluidselement voor het afspelen van een geluid bij een nieuwe bestelling -->
+    <audio id="notificationSound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+
     <script>
         document.getElementById('orderForm').addEventListener('submit', async function (event) {
             event.preventDefault(); // Voorkom dat de pagina herlaadt
@@ -98,20 +101,38 @@
                 });
 
                 // Controleer of de response succesvol is
-                const result = await response.json();
-
                 if (response.ok) {
+                    const result = await response.json();
                     document.getElementById('responseMessage').innerHTML = `✅ Bestelling succesvol geplaatst! Order ID: ${result.orderId}`;
                     document.getElementById('orderForm').reset(); // Reset het formulier
                 } else {
+                    const result = await response.json();
                     document.getElementById('responseMessage').innerHTML = `<span class="error">${result.message}</span>`;
                 }
-
             } catch (error) {
                 document.getElementById('responseMessage').innerHTML = `<span class="error">Er is een fout opgetreden. Probeer het opnieuw.</span>`;
                 console.error('Error:', error);
             }
         });
+
+        // Functie om nieuwe bestellingen te controleren
+        async function checkForNewOrders() {
+            try {
+                const response = await fetch('https://97e5-143-179-158-36.ngrok-free.app/admin');
+                const html = await response.text();
+
+                // Controleer of er een nieuwe bestelling is (dit kan verder worden verfijnd)
+                if (html.includes('Nieuwe Bestelling')) {
+                    document.getElementById('responseMessage').innerHTML = '🔔 Nieuwe bestelling ontvangen!';
+                    document.getElementById('notificationSound').play(); // Speel geluid af
+                }
+            } catch (error) {
+                console.error('Error bij het controleren van bestellingen:', error);
+            }
+        }
+
+        // Controleer elke 5 seconden op nieuwe bestellingen
+        setInterval(checkForNewOrders, 5000);
     </script>
 
 </body>
