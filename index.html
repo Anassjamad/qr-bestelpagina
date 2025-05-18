@@ -116,13 +116,20 @@
         });
 
         // Functie om nieuwe bestellingen te controleren
+        // Globale variabele om bij te houden welke bestellingen al zijn opgehaald
+        let lastOrderId = null;
+
+        // Functie om nieuwe bestellingen te controleren
         async function checkForNewOrders() {
             try {
                 const response = await fetch('https://97e5-143-179-158-36.ngrok-free.app/admin');
                 const html = await response.text();
 
-                // Controleer of er een nieuwe bestelling is (dit kan verder worden verfijnd)
-                if (html.includes('Nieuwe Bestelling')) {
+                // Kijk of er nieuwe bestellingen zijn (je zou deze logica kunnen aanpassen op basis van het teruggegeven HTML)
+                const newOrderId = getNewOrderId(html); // Functie om order ID uit de HTML te halen
+
+                if (newOrderId !== lastOrderId) {
+                    lastOrderId = newOrderId; // Bijwerken naar het nieuwste order ID
                     document.getElementById('responseMessage').innerHTML = '🔔 Nieuwe bestelling ontvangen!';
                     document.getElementById('notificationSound').play(); // Speel geluid af
                 }
@@ -131,6 +138,15 @@
             }
         }
 
+        // Functie om het nieuwste order ID uit de HTML te extraheren
+        function getNewOrderId(html) {
+            // Hier zou je de logica kunnen toevoegen om het nieuwste order ID uit de HTML te extraheren
+            // Bijvoorbeeld door een specifieke zoekstring te gebruiken of door een regex te gebruiken
+            const regex = /<td>(ORD-\d+)<\/td>/; // Dit is een voorbeeld van een regex die order ID's zoekt
+            const match = html.match(regex);
+
+            return match ? match[1] : null; // Het eerste matchende order ID
+        }
         // Controleer elke 5 seconden op nieuwe bestellingen
         setInterval(checkForNewOrders, 5000);
     </script>
