@@ -92,7 +92,7 @@
 
             try {
                 // Verstuur de POST request naar de backend
-                const response = await fetch('https://97e5-143-179-158-36.ngrok-free.app/order', {
+                const response = await fetch('https://7872-143-179-158-36.ngrok-free.app/order', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -122,19 +122,14 @@
         // Functie om nieuwe bestellingen te controleren
         async function checkForNewOrders() {
             try {
-                const response = await fetch('https://97e5-143-179-158-36.ngrok-free.app/admin');
-                const html = await response.text();
-
-                // Kijk of er nieuwe bestellingen zijn (je zou deze logica kunnen aanpassen op basis van het teruggegeven HTML)
-                const newOrderId = getNewOrderId(html); // Functie om order ID uit de HTML te halen
-
-                if (newOrderId !== lastOrderId) {
-                    lastOrderId = newOrderId; // Bijwerken naar het nieuwste order ID
-                    document.getElementById('responseMessage').innerHTML = '🔔 Nieuwe bestelling ontvangen!';
-                    document.getElementById('notificationSound').play(); // Speel geluid af
+                const response = await fetch('https://7872-143-179-158-36.ngrok-free.app/admin');
+                if (!response.ok) {
+                    throw new Error('Netwerkfout: ' + response.statusText);
                 }
+                const html = await response.text();
+                // Verwerk de HTML hier
             } catch (error) {
-                console.error('Error bij het controleren van bestellingen:', error);
+                console.error('Fout bij het ophalen van bestellingen:', error);
             }
         }
 
