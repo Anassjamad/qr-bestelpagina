@@ -49,6 +49,11 @@
         .error {
             color: red;
         }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
     </style>
 </head>
 <body>
@@ -69,30 +74,26 @@
         </form>
 
         <div id="responseMessage" class="message"></div>
+
+        <h3>Nieuwe Bestellingen</h3>
+        <ul id="orderList"></ul>
     </div>
 
-    <!-- Geluidselement voor het afspelen van een geluid bij een nieuwe bestelling -->
+    <!-- Geluidselement -->
     <audio id="notificationSound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
 
     <script>
-        // Het formulier voor de bestelling
+        // Bestelling plaatsen
         document.getElementById('orderForm').addEventListener('submit', async function (event) {
-            event.preventDefault(); // Voorkom dat de pagina herlaadt
+            event.preventDefault();
 
-            // Haal de waarden van de invoervelden op
             const item = document.getElementById('item').value;
             const quantity = document.getElementById('quantity').value;
             const opmerking = document.getElementById('opmerking').value;
 
-            // Maak een object voor de body van de request
-            const orderData = {
-                item,
-                quantity,
-                opmerking
-            };
+            const orderData = { item, quantity, opmerking };
 
             try {
-                // Verstuur de POST request naar de backend
                 const response = await fetch('https://bde6-143-179-158-36.ngrok-free.app/order', {
                     method: 'POST',
                     headers: {
@@ -101,58 +102,41 @@
                     body: JSON.stringify(orderData)
                 });
 
-                // Controleer of de response succesvol is
+                const result = await response.json();
+
                 if (response.ok) {
-                    const result = await response.json();
-                    document.getElementById('responseMessage').innerHTML = `✅ Bestelling succesvol geplaatst! Order ID: ${result.orderId}`;
-                    document.getElementById('orderForm').reset(); // Reset het formulier
+                    document.getElementById('responseMessage').textContent = `✅ Bestelling geplaatst! Order ID: ${result.orderId}`;
+                    document.getElementById('orderForm').reset();
                 } else {
-                    const result = await response.json();
                     document.getElementById('responseMessage').innerHTML = `<span class="error">${result.message}</span>`;
                 }
             } catch (error) {
-                document.getElementById('responseMessage').innerHTML = `<span class="error">Er is een fout opgetreden. Probeer het opnieuw.</span>`;
+                document.getElementById('responseMessage').innerHTML = `<span class="error">Fout bij verzenden bestelling.</span>`;
                 console.error('Error:', error);
             }
         });
 
-        // Variabele om bij te houden welk orderId al gezien is
-        let lastSeenOrderId = null;
+        // SSE - ontvang live bestellingen
+        const evtSource = new EventSource('https://bde6-143-179-158-36.ngrok-free.app/admin/notifications');
 
-        // Functie om nieuwe bestellingen te controleren
-        async function checkForNewOrders() {
-            try {
-                const response = await fetch('https://bde6-143-179-158-36.ngrok-free.app/admin/data');
-                const orders = await response.json();
+        evtSource.onmessage = function (event) {
+            const order = JSON.parse(event.data);
 
-                if (!Array.isArray(orders) || orders.length === 0) return;
+            const sound = document.getElementById('notificationSound');
+            sound.play();
 
-                const latestOrder = orders[0];
+            const responseMessage = document.getElementById('responseMessage');
+            responseMessage.textContent = `🔔 Nieuwe bestelling: ${order.orderId}`;
 
-                if (latestOrder.orderId !== lastSeenOrderId) {
-                    // Nieuwe bestelling gedetecteerd
-                    lastSeenOrderId = latestOrder.orderId;
+            const orderList = document.getElementById('orderList');
+            const newOrder = document.createElement('li');
+            newOrder.textContent = `Order ID: ${order.orderId}, Item: ${order.item}, Aantal: ${order.quantity}, Opmerking: ${order.opmerking || 'Geen'}`;
+            orderList.prepend(newOrder);
+        };
 
-                    // Speel geluid af
-                    document.getElementById('notificationSound').play();
-
-                    // Optioneel: toon melding in DOM
-                    const responseMessage = document.getElementById('responseMessage');
-                    responseMessage.innerHTML = `🔔 Nieuwe bestelling ontvangen! Order ID: ${latestOrder.orderId}`;
-
-                    // Voeg de bestelling toe aan de lijst
-                    const orderList = document.getElementById('orderList');
-                    const newOrderItem = document.createElement('li');
-                    newOrderItem.innerText = `Order ID: ${latestOrder.orderId}, Item: ${latestOrder.item}, Aantal: ${latestOrder.quantity}, Opmerking: ${latestOrder.opmerking || 'Geen opmerkingen'}`;
-                    orderList.appendChild(newOrderItem);
-                }
-            } catch (error) {
-                console.error('Fout bij ophalen van bestellingen:', error);
-            }
-        }
-
-        // Controleer elke 5 seconden op nieuwe bestellingen
-        setInterval(checkForNewOrders, 5000);
+        evtSource.onerror = function (err) {
+            console.error("SSE fout:", err);
+        };
     </script>
 
 </body>
