@@ -41,9 +41,15 @@
                 background-color: #45a049;
             }
 
+        #startBtn {
+            margin-top: 10px;
+            background-color: #2196F3;
+        }
+
         .message {
             font-size: 1.2em;
             color: green;
+            margin-top: 10px;
         }
 
         .error {
@@ -53,6 +59,11 @@
         ul {
             list-style: none;
             padding-left: 0;
+        }
+
+        li {
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
         }
     </style>
 </head>
@@ -73,6 +84,8 @@
             <button type="submit">Bestelling Plaatsen</button>
         </form>
 
+        <button id="startBtn">🔊 Start Luisteren voor Nieuwe Bestellingen</button>
+
         <div id="responseMessage" class="message"></div>
 
         <h3>Nieuwe Bestellingen</h3>
@@ -83,6 +96,40 @@
     <audio id="notificationSound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
 
     <script>
+        let evtSourceStarted = false;
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (evtSourceStarted) return;
+
+            const testSound = document.getElementById('notificationSound');
+            testSound.play().catch(err => console.warn('Autoplay blokkade:', err));
+
+            const evtSource = new EventSource('https://bfe5-143-179-158-36.ngrok-free.app/admin/notifications');
+            evtSourceStarted = true;
+
+            evtSource.onmessage = function (event) {
+                const order = JSON.parse(event.data);
+
+                const sound = document.getElementById('notificationSound');
+                sound.play().catch(err => console.warn('Geluid kon niet afgespeeld worden:', err));
+
+                const responseMessage = document.getElementById('responseMessage');
+                responseMessage.textContent = `🔔 Nieuwe bestelling: ${order.orderId}`;
+
+                const orderList = document.getElementById('orderList');
+                const newOrder = document.createElement('li');
+                newOrder.textContent = `Order ID: ${order.orderId}, Item: ${order.item}, Aantal: ${order.quantity}, Opmerking: ${order.opmerking || 'Geen'}`;
+                orderList.prepend(newOrder);
+            };
+
+            evtSource.onerror = function (err) {
+                console.error("SSE fout:", err);
+            };
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('startBtn').textContent = '🔊 Luisteren actief';
+        });
+
         // Bestelling plaatsen
         document.getElementById('orderForm').addEventListener('submit', async function (event) {
             event.preventDefault();
@@ -115,28 +162,6 @@
                 console.error('Error:', error);
             }
         });
-
-        // SSE - ontvang live bestellingen
-        const evtSource = new EventSource('https://bfe5-143-179-158-36.ngrok-free.app/admin/notifications');
-
-        evtSource.onmessage = function (event) {
-            const order = JSON.parse(event.data);
-
-            const sound = document.getElementById('notificationSound');
-            sound.play();
-
-            const responseMessage = document.getElementById('responseMessage');
-            responseMessage.textContent = `🔔 Nieuwe bestelling: ${order.orderId}`;
-
-            const orderList = document.getElementById('orderList');
-            const newOrder = document.createElement('li');
-            newOrder.textContent = `Order ID: ${order.orderId}, Item: ${order.item}, Aantal: ${order.quantity}, Opmerking: ${order.opmerking || 'Geen'}`;
-            orderList.prepend(newOrder);
-        };
-
-        evtSource.onerror = function (err) {
-            console.error("SSE fout:", err);
-        };
     </script>
 
 </body>
