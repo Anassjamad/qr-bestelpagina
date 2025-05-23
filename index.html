@@ -94,7 +94,7 @@
             const orderData = { item, quantity, opmerking };
 
             try {
-                const response = await fetch('https://bde6-143-179-158-36.ngrok-free.app/order', {
+                const response = await fetch('https://bfe5-143-179-158-36.ngrok-free.app/order', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -117,7 +117,7 @@
         });
 
         // SSE - ontvang live bestellingen
-        const evtSource = new EventSource('https://bde6-143-179-158-36.ngrok-free.app/admin/notifications');
+        const evtSource = new EventSource('https://bfe5-143-179-158-36.ngrok-free.app/admin/notifications');
 
         evtSource.onmessage = function (event) {
             const order = JSON.parse(event.data);
