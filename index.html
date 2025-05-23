@@ -45,7 +45,6 @@
         .message {
             font-size: 1.2em;
             color: green;
-            margin-top: 10px;
         }
 
         .error {
@@ -55,19 +54,6 @@
         ul {
             list-style: none;
             padding-left: 0;
-        }
-
-        .notification {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background-color: #fffae6;
-            padding: 10px 20px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-            z-index: 9999;
-            font-weight: bold;
         }
     </style>
 </head>
@@ -93,16 +79,16 @@
         <ul id="orderList"></ul>
     </div>
 
-    <!-- 🔊 Geluid afspelen bij nieuwe bestelling -->
+    <!-- Werkende geluidssrc -->
     <audio id="notificationSound"
            src="https://assets.mixkit.co/sfx/download/mixkit-clear-notification-2861.mp3"
            preload="auto"></audio>
 
     <script>
-        // Vervang met jouw backend URL
+        // Vervang dit met jouw actuele ngrok URL!
         const BASE_URL = 'https://bfe5-143-179-158-36.ngrok-free.app';
 
-        // Bestelling verzenden
+        // Bestelling plaatsen
         document.getElementById('orderForm').addEventListener('submit', async function (event) {
             event.preventDefault();
 
@@ -135,29 +121,21 @@
             }
         });
 
-        // SSE ontvangen
+        // SSE - ontvang live bestellingen
         const evtSource = new EventSource(`${BASE_URL}/admin/notifications`);
 
         evtSource.onmessage = function (event) {
             const order = JSON.parse(event.data);
 
-            // Speel geluid af
             const sound = document.getElementById('notificationSound');
             sound.play().catch(() => {
-                console.warn('🔇 Geluid kon niet automatisch afgespeeld worden');
+                // Geluid kan soms geblokkeerd worden door browser autoplay policies
+                console.warn('Geluid kon niet automatisch afspelen');
             });
 
-            // Toon visuele melding
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.textContent = `🔔 Nieuwe bestelling ontvangen: ${order.orderId}`;
-            document.body.appendChild(notification);
+            const responseMessage = document.getElementById('responseMessage');
+            responseMessage.textContent = `🔔 Nieuwe bestelling: ${order.orderId}`;
 
-            setTimeout(() => {
-                notification.remove();
-            }, 5000);
-
-            // Voeg toe aan de lijst
             const orderList = document.getElementById('orderList');
             const newOrder = document.createElement('li');
             newOrder.textContent = `Order ID: ${order.orderId}, Item: ${order.item}, Aantal: ${order.quantity}, Opmerking: ${order.opmerking || 'Geen'}`;
@@ -165,7 +143,7 @@
         };
 
         evtSource.onerror = function (err) {
-            console.error('❌ SSE fout:', err);
+            console.error('SSE fout:', err);
         };
     </script>
 </body>
