@@ -2,149 +2,113 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bestel Systeem</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bestellen</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            background-color: #f7f7f7;
+            padding: 30px;
         }
 
-        .container {
-            max-width: 500px;
-            margin: auto;
+        h2 {
+            color: #333;
+        }
+
+        form {
+            background-color: white;
             padding: 20px;
-            border: 1px solid #ccc;
             border-radius: 8px;
-            background-color: #f9f9f9;
+            max-width: 400px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
-        input,
-        textarea {
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input, textarea, select, button {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
+            margin-top: 5px;
+            border-radius: 4px;
             border: 1px solid #ccc;
-            border-radius: 5px;
         }
 
         button {
-            background-color: #4caf50;
+            background-color: #28a745;
             color: white;
-            padding: 15px 32px;
-            border: none;
-            border-radius: 5px;
+            margin-top: 20px;
+            font-weight: bold;
             cursor: pointer;
-            width: 100%;
         }
 
             button:hover {
-                background-color: #45a049;
+                background-color: #218838;
             }
 
         .message {
-            font-size: 1.2em;
-            color: green;
-        }
-
-        .error {
-            color: red;
-        }
-
-        ul {
-            list-style: none;
-            padding-left: 0;
+            margin-top: 20px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Bestelling Plaatsen</h2>
-        <form id="orderForm">
-            <label for="item">Item</label>
-            <input type="text" id="item" name="item" required />
+    <h2>Bestel je item</h2>
 
-            <label for="quantity">Aantal</label>
-            <input type="number" id="quantity" name="quantity" required />
+    <form id="orderForm">
+        <label for="item">Item</label>
+        <input type="text" id="item" name="item" required />
 
-            <label for="opmerking">Opmerking</label>
-            <textarea id="opmerking" name="opmerking"></textarea>
+        <label for="quantity">Aantal</label>
+        <input type="number" id="quantity" name="quantity" required min="1" />
 
-            <button type="submit">Bestelling Plaatsen</button>
-        </form>
+        <label for="opmerking">Opmerking (optioneel)</label>
+        <textarea id="opmerking" name="opmerking"></textarea>
 
-        <div id="responseMessage" class="message"></div>
-
-        <h3>Nieuwe Bestellingen</h3>
-        <ul id="orderList"></ul>
-    </div>
-
-    <!-- Werkende geluidssrc -->
-    <audio id="notificationSound"
-           src="https://assets.mixkit.co/sfx/download/mixkit-clear-notification-2861.mp3"
-           preload="auto"></audio>
+        <button type="submit">Bestellen</button>
+        <div class="message" id="message"></div>
+    </form>
 
     <script>
-        // Vervang dit met jouw actuele ngrok URL!
-        const BASE_URL = 'https://bfe5-143-179-158-36.ngrok-free.app';
+        const form = document.getElementById('orderForm');
+        const messageDiv = document.getElementById('message');
 
-        // Bestelling plaatsen
-        document.getElementById('orderForm').addEventListener('submit', async function (event) {
-            event.preventDefault();
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            const item = document.getElementById('item').value;
-            const quantity = document.getElementById('quantity').value;
-            const opmerking = document.getElementById('opmerking').value;
-
-            const orderData = { item, quantity, opmerking };
+            const data = {
+                item: form.item.value,
+                quantity: parseInt(form.quantity.value),
+                opmerking: form.opmerking.value
+            };
 
             try {
-                const response = await fetch(`${BASE_URL}/order`, {
+                const res = await fetch('https://bestel-backend.onrender.com/order', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(orderData),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
 
-                const result = await response.json();
+                const result = await res.json();
 
-                if (response.ok) {
-                    document.getElementById('responseMessage').textContent = `✅ Bestelling geplaatst! Order ID: ${result.orderId}`;
-                    document.getElementById('orderForm').reset();
+                if (res.ok) {
+                    messageDiv.style.color = 'green';
+                    messageDiv.textContent = '✅ Bestelling geplaatst: ' + result.orderId;
+                    form.reset();
                 } else {
-                    document.getElementById('responseMessage').innerHTML = `<span class="error">${result.message}</span>`;
+                    messageDiv.style.color = 'red';
+                    messageDiv.textContent = '⛔ Fout: ' + result.message;
                 }
-            } catch (error) {
-                document.getElementById('responseMessage').innerHTML = `<span class="error">Fout bij verzenden bestelling.</span>`;
-                console.error('Error:', error);
+            } catch (err) {
+                messageDiv.style.color = 'red';
+                messageDiv.textContent = '⛔ Er is een fout opgetreden. Probeer opnieuw.';
+                console.error(err);
             }
         });
-
-        // SSE - ontvang live bestellingen
-        const evtSource = new EventSource(`${BASE_URL}/admin/notifications`);
-
-        evtSource.onmessage = function (event) {
-            const order = JSON.parse(event.data);
-
-            const sound = document.getElementById('notificationSound');
-            sound.play().catch(() => {
-                // Geluid kan soms geblokkeerd worden door browser autoplay policies
-                console.warn('Geluid kon niet automatisch afspelen');
-            });
-
-            const responseMessage = document.getElementById('responseMessage');
-            responseMessage.textContent = `🔔 Nieuwe bestelling: ${order.orderId}`;
-
-            const orderList = document.getElementById('orderList');
-            const newOrder = document.createElement('li');
-            newOrder.textContent = `Order ID: ${order.orderId}, Item: ${order.item}, Aantal: ${order.quantity}, Opmerking: ${order.opmerking || 'Geen'}`;
-            orderList.prepend(newOrder);
-        };
-
-        evtSource.onerror = function (err) {
-            console.error('SSE fout:', err);
-        };
     </script>
 </body>
 </html>
