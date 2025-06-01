@@ -2,113 +2,477 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bestellen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bestelpagina met product-opmerkingen</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f7f7;
-            padding: 30px;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #eafaf1 0%, #ffffff 100%);
+            margin: 0;
+            padding: 40px 20px;
+            color: #2a4d14;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         h2 {
-            color: #333;
+            color: #2a7a0a;
+            font-weight: 600;
+            margin-bottom: 30px;
+            font-size: 2.2rem;
+            letter-spacing: 1px;
         }
+
+        .menu {
+            background: #ffffff;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 12px 30px rgba(42, 122, 10, 0.2);
+            padding: 25px 30px;
+            margin-bottom: 40px;
+        }
+
+        .item {
+            display: flex;
+            flex-direction: column;
+            padding: 15px 0;
+            border-bottom: 1px solid #d3e4c6;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+            .item:last-child {
+                border-bottom: none;
+            }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+            .item-info h3 {
+                margin: 0 0 6px 0;
+                font-weight: 600;
+                font-size: 1.2rem;
+                color: #2a7a0a;
+            }
+
+            .item-info p {
+                margin: 0;
+                font-weight: 600;
+                color: #4a6d2c;
+                font-size: 1rem;
+            }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .quantity-controls button {
+                background: #2a7a0a;
+                border: none;
+                color: white;
+                font-weight: 700;
+                font-size: 1.4rem;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                cursor: pointer;
+                user-select: none;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: background-color 0.2s ease, transform 0.15s ease;
+                box-shadow: 0 2px 6px rgba(42, 122, 10, 0.5);
+            }
+
+                .quantity-controls button:hover {
+                    background: #1e5607;
+                    transform: scale(1.15);
+                }
+
+                .quantity-controls button:active {
+                    transform: scale(0.95);
+                }
+
+            .quantity-controls span {
+                min-width: 28px;
+                text-align: center;
+                font-weight: 600;
+                font-size: 1.1rem;
+                color: #2a7a0a;
+                transition: transform 0.3s ease;
+                display: inline-block;
+            }
+
+        textarea.product-opmerking {
+            margin-top: 8px;
+            resize: vertical;
+            min-height: 50px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid #a8d08d;
+            transition: border-color 0.3s ease;
+            color: #2a4d14;
+            display: none;
+        }
+
+            textarea.product-opmerking.visible {
+                display: block;
+            }
+
+            textarea.product-opmerking:focus {
+                outline: none;
+                border-color: #2a7a0a;
+                box-shadow: 0 0 6px rgba(42, 122, 10, 0.5);
+            }
 
         form {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 400px;
-            margin: auto;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        label {
-            display: block;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-
-        input, textarea, select, button {
+            max-width: 500px;
             width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 12px 30px rgba(42, 122, 10, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        button {
-            background-color: #28a745;
+        .summary {
+            background: #e3f2d3;
+            padding: 20px 25px;
+            border-radius: 12px;
+            color: #2a7a0a;
+            font-weight: 600;
+            font-size: 1.1rem;
+            min-height: 70px;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .summary ul {
+                margin: 10px 0 0 20px;
+                padding: 0;
+                color: #4a6d2c;
+                font-weight: 400;
+                font-size: 1rem;
+                list-style-type: disc;
+                max-height: 120px;
+                overflow-y: auto;
+                transition: all 0.3s ease;
+            }
+
+        button[type="submit"] {
+            background: #2a7a0a;
             color: white;
-            margin-top: 20px;
-            font-weight: bold;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 15px;
+            border-radius: 15px;
             cursor: pointer;
+            box-shadow: 0 8px 15px rgba(42, 122, 10, 0.5);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
         }
 
-            button:hover {
-                background-color: #218838;
+            button[type="submit"]:hover {
+                background: #1e5607;
+                box-shadow: 0 10px 20px rgba(30, 86, 7, 0.7);
+                transform: scale(1.05);
+            }
+
+            button[type="submit"]:active {
+                transform: scale(0.95);
             }
 
         .message {
-            margin-top: 20px;
             text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+            .message.show {
+                opacity: 1;
+            }
+
+            .message.success {
+                color: #28a745;
+            }
+
+            .message.error {
+                color: #dc3545;
+            }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
+        }
+
+        .quantity-controls button.bounce {
+            animation: bounce 0.3s ease;
+        }
+
+        .quantity-animate {
+            animation: scaleUp 0.3s ease forwards;
+        }
+
+        @keyframes scaleUp {
+            0% {
+                transform: scale(1);
+                color: #2a7a0a;
+            }
+
+            50% {
+                transform: scale(1.4);
+                color: #1e5607;
+            }
+
+            100% {
+                transform: scale(1);
+                color: #2a7a0a;
+            }
+        }
+
+        @media (max-width: 540px) {
+            body {
+                padding: 30px 15px;
+            }
+
+            .menu, form {
+                padding: 20px;
+            }
+
+            .item-info h3 {
+                font-size: 1rem;
+            }
+
+            .item-info p {
+                font-size: 0.9rem;
+            }
+
+            button[type="submit"] {
+                font-size: 1rem;
+                padding: 12px;
+            }
         }
     </style>
 </head>
 <body>
-    <h2>Bestel je item</h2>
+
+    <h2>🍽️ Bestel jouw maaltijd</h2>
+
+    <div class="menu" id="menu"></div>
 
     <form id="orderForm">
-        <label for="item">Item</label>
-        <input type="text" id="item" name="item" required />
+        <div class="summary">
+            <h3>🧾 Jouw Bestelling:</h3>
+            <ul id="orderList">Nog geen producten toegevoegd.</ul>
+            <div><strong>Totaal: €<span id="totalPrice">0.00</span></strong></div>
+        </div>
 
-        <label for="quantity">Aantal</label>
-        <input type="number" id="quantity" name="quantity" required min="1" />
-
-        <label for="opmerking">Opmerking (optioneel)</label>
-        <textarea id="opmerking" name="opmerking"></textarea>
-
-        <button type="submit">Bestellen</button>
+        <button type="submit">✅ Bestellen</button>
         <div class="message" id="message"></div>
     </form>
 
     <script>
+        const products = [
+            { name: 'Hamburger', price: 5.50 },
+            { name: 'Pizza Margherita', price: 8.00 },
+            { name: 'Friet', price: 3.00 },
+            { name: 'Kipnuggets', price: 4.50 },
+            { name: 'Cola', price: 2.50 },
+        ];
+
+        const menuElem = document.getElementById('menu');
+        const orderList = document.getElementById('orderList');
+        const totalPriceElem = document.getElementById('totalPrice');
         const form = document.getElementById('orderForm');
         const messageDiv = document.getElementById('message');
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        let order = products.map(() => ({ qty: 0, opmerking: '' }));
 
-            const data = {
-                item: form.item.value,
-                quantity: parseInt(form.quantity.value),
-                opmerking: form.opmerking.value
-            };
+        function renderMenu() {
+            menuElem.innerHTML = '';
+            products.forEach((product, i) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('item');
 
-            try {
-                const res = await fetch('https://bestel-backend.onrender.com/order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                // Header with product name, price, and quantity controls
+                const header = document.createElement('div');
+                header.classList.add('item-header');
+
+                const infoDiv = document.createElement('div');
+                infoDiv.classList.add('item-info');
+
+                const nameH3 = document.createElement('h3');
+                nameH3.textContent = product.name;
+                infoDiv.appendChild(nameH3);
+
+                const priceP = document.createElement('p');
+                priceP.textContent = `€ ${product.price.toFixed(2)}`;
+                infoDiv.appendChild(priceP);
+
+                header.appendChild(infoDiv);
+
+                // Quantity controls
+                const quantityControls = document.createElement('div');
+                quantityControls.classList.add('quantity-controls');
+
+                const minusBtn = document.createElement('button');
+                minusBtn.type = 'button';
+                minusBtn.textContent = '−';
+                minusBtn.title = 'Aantal verminderen';
+                minusBtn.addEventListener('click', () => {
+                    if (order[i].qty > 0) {
+                        order[i].qty--;
+                        animateQuantity(i);
+                        if (order[i].qty === 0) {
+                            order[i].opmerking = '';
+                        }
+                        renderMenu();
+                        updateSummary();
+                    }
                 });
 
-                const result = await res.json();
+                const qtySpan = document.createElement('span');
+                qtySpan.textContent = order[i].qty;
+                qtySpan.id = `qty-${i}`;
 
-                if (res.ok) {
-                    messageDiv.style.color = 'green';
-                    messageDiv.textContent = '✅ Bestelling geplaatst: ' + result.orderId;
-                    form.reset();
-                } else {
-                    messageDiv.style.color = 'red';
-                    messageDiv.textContent = '⛔ Fout: ' + result.message;
+                const plusBtn = document.createElement('button');
+                plusBtn.type = 'button';
+                plusBtn.textContent = '+';
+                plusBtn.title = 'Aantal verhogen';
+                plusBtn.addEventListener('click', () => {
+                    order[i].qty++;
+                    animateQuantity(i);
+                    renderMenu();
+                    updateSummary();
+                });
+
+                quantityControls.appendChild(minusBtn);
+                quantityControls.appendChild(qtySpan);
+                quantityControls.appendChild(plusBtn);
+
+                header.appendChild(quantityControls);
+
+                itemDiv.appendChild(header);
+
+                // Opmerking textarea (alleen zichtbaar als qty > 0)
+                const opmerkingTextarea = document.createElement('textarea');
+                opmerkingTextarea.classList.add('product-opmerking');
+                if (order[i].qty > 0) {
+                    opmerkingTextarea.classList.add('visible');
                 }
-            } catch (err) {
-                messageDiv.style.color = 'red';
-                messageDiv.textContent = '⛔ Er is een fout opgetreden. Probeer opnieuw.';
-                console.error(err);
+                opmerkingTextarea.placeholder = 'Opmerking bij dit product...';
+                opmerkingTextarea.value = order[i].opmerking;
+                opmerkingTextarea.addEventListener('input', e => {
+                    order[i].opmerking = e.target.value;
+                    updateSummary();
+                });
+
+                itemDiv.appendChild(opmerkingTextarea);
+
+                menuElem.appendChild(itemDiv);
+            });
+        }
+
+        function animateQuantity(index) {
+            const qtySpan = document.getElementById(`qty-${index}`);
+            if (!qtySpan) return;
+
+            qtySpan.classList.add('quantity-animate');
+            setTimeout(() => {
+                qtySpan.classList.remove('quantity-animate');
+            }, 300);
+        }
+
+        function updateSummary() {
+            const entries = order
+                .map((o, idx) => ({ idx, ...o }))
+                .filter(o => o.qty > 0);
+
+            orderList.innerHTML = '';
+            if (entries.length === 0) {
+                orderList.textContent = 'Nog geen producten toegevoegd.';
+                totalPriceElem.textContent = '0.00';
+                return;
             }
+
+            let total = 0;
+            entries.forEach(({ idx, qty, opmerking }) => {
+                const product = products[idx];
+                total += product.price * qty;
+
+                const li = document.createElement('li');
+                let text = `${product.name} x${qty}`;
+                if (opmerking.trim().length > 0) {
+                    text += ` — Opmerking: ${opmerking}`;
+                }
+                li.textContent = text;
+                orderList.appendChild(li);
+            });
+
+            totalPriceElem.textContent = total.toFixed(2);
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const entries = order.filter(o => o.qty > 0);
+            if (entries.length === 0) {
+                showMessage('Je hebt nog geen producten toegevoegd!', 'error');
+                return;
+            }
+
+            // Hier zou je de bestelling kunnen verzenden naar een server
+            showMessage('Bedankt voor je bestelling! 🎉', 'success');
+
+            // Reset bestelling
+            order = products.map(() => ({ qty: 0, opmerking: '' }));
+            renderMenu();
+            updateSummary();
         });
+
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = 'message show ' + (type === 'success' ? 'success' : 'error');
+            setTimeout(() => {
+                messageDiv.classList.remove('show', 'success', 'error');
+            }, 4000);
+        }
+
+        renderMenu();
+        updateSummary();
     </script>
+
 </body>
 </html>
