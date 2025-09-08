@@ -148,13 +148,19 @@
     </div>
 
     <script>
+        console.log('▶️ Script geladen');
+
+        // Haal tafelnummer uit URL
         const urlParams = new URLSearchParams(window.location.search);
-        const tafel = urlParams.get('tafel'); // ✅ haal tafelnummer uit de URL
+        const tafel = urlParams.get('tafel');
+        console.log('🔍 URL:', window.location.href);
+        console.log('📦 Tafelnummer:', tafel);
 
         const productList = document.getElementById('productList');
         const totaalSpan = document.getElementById('totaal');
         const form = document.getElementById('orderForm');
         const message = document.getElementById('message');
+
         let bestelling = {};
 
         function updateTotaal() {
@@ -172,14 +178,14 @@
             wrapper.innerHTML = `
                     <img src="${product.image}" alt="${product.naam}" />
                     <div class="product-info">
-                      <h3>${product.naam}</h3>
-                      <p>Prijs: €${product.prijs.toFixed(2)}</p>
-                      <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
+                        <h3>${product.naam}</h3>
+                        <p>Prijs: €${product.prijs.toFixed(2)}</p>
+                        <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
                     </div>
                     <div class="product-controls">
-                      <button type="button" class="plus">+</button>
-                      <span>0</span>
-                      <button type="button" class="minus">−</button>
+                        <button type="button" class="plus">+</button>
+                        <span>0</span>
+                        <button type="button" class="minus">−</button>
                     </div>
                 `;
 
@@ -199,6 +205,7 @@
                 qtySpan.textContent = q;
                 opmerkingField.style.display = 'block';
                 updateTotaal();
+                console.log(`➕ ${product.naam}: ${q}`);
             });
 
             minBtn.addEventListener('click', () => {
@@ -213,12 +220,14 @@
                     }
                     qtySpan.textContent = q;
                     updateTotaal();
+                    console.log(`➖ ${product.naam}: ${q}`);
                 }
             });
 
             opmerkingField.addEventListener('input', () => {
                 if (bestelling[product.naam]) {
                     bestelling[product.naam].opmerking = opmerkingField.value;
+                    console.log(`📝 Opmerking ${product.naam}: ${opmerkingField.value}`);
                 }
             });
 
@@ -234,8 +243,9 @@
                     const el = createProductCard(p);
                     productList.appendChild(el);
                 });
+                console.log('📦 Producten geladen:', data.length);
             } catch (err) {
-                console.error('Fout bij laden producten:', err);
+                console.error('⛔ Fout bij laden producten:', err);
                 message.textContent = '⛔ Kan producten niet ophalen.';
                 message.style.color = 'red';
             }
@@ -247,6 +257,7 @@
             if (!tafel) {
                 message.textContent = '⛔ Er is geen tafelnummer opgegeven in de URL.';
                 message.style.color = 'red';
+                console.warn('Geen tafelnummer in URL');
                 return;
             }
 
@@ -259,11 +270,12 @@
             if (producten.length === 0) {
                 message.textContent = '⛔ Voeg eerst producten toe aan je bestelling.';
                 message.style.color = 'red';
+                console.warn('Geen producten toegevoegd');
                 return;
             }
 
             try {
-                console.log('Bestelling plaatsen met tafel:', tafel);
+                console.log('🚀 Bestelling plaatsen met payload:', { producten, tafel });
                 const res = await fetch('https://bestel-backend.onrender.com/order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -271,6 +283,7 @@
                 });
 
                 const result = await res.json();
+                console.log('📩 Server response:', result);
 
                 if (!res.ok) {
                     message.textContent = '⛔ Fout bij plaatsen van bestelling.';
@@ -286,8 +299,9 @@
                 document.querySelectorAll('.product span').forEach(span => (span.textContent = '0'));
                 document.querySelectorAll('.opmerking').forEach(o => (o.style.display = 'none'));
                 updateTotaal();
+
             } catch (err) {
-                console.error(err);
+                console.error('⛔ Fout bij fetch:', err);
                 message.textContent = '⛔ Er ging iets mis met de verbinding.';
                 message.style.color = 'red';
             }
