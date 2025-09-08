@@ -141,20 +141,20 @@
 
         <form id="orderForm">
             <div class="products" id="productList"></div>
-
             <div class="total">Totaal: €<span id="totaal">0.00</span></div>
-
             <button type="submit">Bestelling plaatsen</button>
             <div class="message" id="message"></div>
         </form>
     </div>
 
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tafel = urlParams.get('tafel'); // ✅ haal tafelnummer uit de URL
+
         const productList = document.getElementById('productList');
         const totaalSpan = document.getElementById('totaal');
         const form = document.getElementById('orderForm');
         const message = document.getElementById('message');
-
         let bestelling = {};
 
         function updateTotaal() {
@@ -169,20 +169,19 @@
         function createProductCard(product) {
             const wrapper = document.createElement('div');
             wrapper.className = 'product';
-
             wrapper.innerHTML = `
-            <img src="${product.image}" alt="${product.naam}" />
-            <div class="product-info">
-              <h3>${product.naam}</h3>
-              <p>Prijs: €${product.prijs.toFixed(2)}</p>
-              <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
-            </div>
-            <div class="product-controls">
-              <button type="button" class="plus">+</button>
-              <span>0</span>
-              <button type="button" class="minus">−</button>
-            </div>
-          `;
+                    <img src="${product.image}" alt="${product.naam}" />
+                    <div class="product-info">
+                      <h3>${product.naam}</h3>
+                      <p>Prijs: €${product.prijs.toFixed(2)}</p>
+                      <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
+                    </div>
+                    <div class="product-controls">
+                      <button type="button" class="plus">+</button>
+                      <span>0</span>
+                      <button type="button" class="minus">−</button>
+                    </div>
+                  `;
 
             const plusBtn = wrapper.querySelector('.plus');
             const minBtn = wrapper.querySelector('.minus');
@@ -229,14 +228,14 @@
         async function loadProducts() {
             try {
                 const res = await fetch('https://bestel-backend.onrender.com/products');
-                const producten = await res.json();
-
-                producten.forEach(p => {
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error('Ongeldige data ontvangen');
+                data.forEach(p => {
                     const el = createProductCard(p);
                     productList.appendChild(el);
                 });
             } catch (err) {
-                console.error('❌ Kan producten niet laden:', err);
+                console.error('Fout bij laden producten:', err);
                 message.textContent = '⛔ Kan producten niet ophalen.';
                 message.style.color = 'red';
             }
@@ -246,14 +245,9 @@
             e.preventDefault();
 
             const producten = [];
-
             for (const naam in bestelling) {
                 const { quantity, opmerking } = bestelling[naam];
-                producten.push({
-                    item: naam,
-                    quantity,
-                    opmerking
-                });
+                producten.push({ item: naam, quantity, opmerking });
             }
 
             if (producten.length === 0) {
@@ -266,7 +260,7 @@
                 const res = await fetch('https://bestel-backend.onrender.com/order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ producten })
+                    body: JSON.stringify({ producten, tafel }) // ✅ tafel meesturen
                 });
 
                 const result = await res.json();
@@ -280,7 +274,6 @@
                 message.textContent = '✅ Bestelling succesvol geplaatst!';
                 message.style.color = 'green';
 
-                // Reset formulier
                 bestelling = {};
                 form.reset();
                 document.querySelectorAll('.product span').forEach(span => span.textContent = '0');
