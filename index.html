@@ -157,6 +157,7 @@
 <body>
     <div class="container">
         <h2>Bestel je producten</h2>
+        <div id="kioskDisplay" style="margin-bottom: 20px; font-weight: bold;"></div>
 
         <!-- Kies type bestelling -->
         <div class="order-type" id="orderTypeSelection">
@@ -177,7 +178,19 @@
     </div>
 
     <script>
-        const backendUrl = 'https://bestel-backend.onrender.com'; // Pas aan indien nodig
+        const backendUrl = 'https://bestel-backend.onrender.com';
+
+        // 🧠 Kiosk-nummer uit URL halen
+        const urlParams = new URLSearchParams(window.location.search);
+        const selectedKiosk = parseInt(urlParams.get('kiosk'));
+
+        if (!selectedKiosk) {
+            alert("⛔ Kiosknummer ontbreekt in de URL. Voeg '?kiosk=1' toe.");
+            document.body.innerHTML = '<h1 style="color:red; text-align:center;">Kiosk niet gespecificeerd. Voeg ?kiosk=1 toe aan de URL.</h1>';
+            throw new Error("Geen kiosknummer in URL.");
+        } else {
+            document.getElementById("kioskDisplay").textContent = `Bestellen vanaf kiosk ${selectedKiosk}`;
+        }
 
         let selectedOrderType = null;
         let producten = [];
@@ -191,17 +204,14 @@
         const orderItemsDiv = document.getElementById('orderItems');
         const cancelOrderBtn = document.getElementById('cancelOrderBtn');
 
-        // Kies bestel type (afhalen of ter plaatse)
         btnPickup.addEventListener('click', () => selectOrderType('pickup'));
         btnTakeaway.addEventListener('click', () => selectOrderType('takeaway'));
 
         function selectOrderType(type) {
             selectedOrderType = type;
-            // Visueel knop selecteren
             btnPickup.classList.toggle('selected', type === 'pickup');
             btnTakeaway.classList.toggle('selected', type === 'takeaway');
 
-            // Producten laden
             loadProducts();
         }
 
@@ -210,7 +220,6 @@
                 const res = await fetch(`${backendUrl}/products`);
                 if (!res.ok) throw new Error('Kan producten niet ophalen.');
                 producten = await res.json();
-
                 showProducts();
             } catch (error) {
                 alert('⛔ Kan producten niet ophalen.');
@@ -269,7 +278,6 @@
                 });
             });
 
-            // Toon knop om naar bestelformulier te gaan
             const btnNext = document.createElement('button');
             btnNext.textContent = 'Verder naar bestelling';
             btnNext.style.marginTop = '20px';
@@ -312,26 +320,21 @@
             productsContainer.style.display = 'none';
             orderForm.style.display = 'block';
 
-            // Bestelling overzicht tonen
             orderItemsDiv.innerHTML = bestelling.map(p => `
                     <p><strong>${p.item}</strong> x ${p.quantity} ${p.opmerking ? `- ${p.opmerking}` : ''}</p>
                 `).join('');
         }
 
-        // Cancel knop terug naar begin
         cancelOrderBtn.addEventListener('click', () => {
             orderForm.style.display = 'none';
             productsContainer.style.display = 'none';
             orderTypeSelection.style.display = 'block';
-
-            // Reset selectie en bestelling
             selectedOrderType = null;
             btnPickup.classList.remove('selected');
             btnTakeaway.classList.remove('selected');
             bestelling = [];
         });
 
-        // Bestelling versturen
         orderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -341,7 +344,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         producten: bestelling,
-                        type: selectedOrderType
+                        type: selectedOrderType,
+                        kiosk: selectedKiosk // ✅ kiosknummer meesturen
                     })
                 });
 
@@ -353,10 +357,7 @@
                 }
 
                 alert('✅ Bestelling geplaatst!');
-
-                // Terug naar start
                 cancelOrderBtn.click();
-
             } catch (error) {
                 alert('⛔ Fout bij plaatsen bestelling.');
                 console.error(error);
@@ -364,4 +365,5 @@
         });
     </script>
 </body>
+
 </html>
