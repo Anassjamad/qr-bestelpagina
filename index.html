@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bestellen</title>
     <link href="https://fonts.googleapis.com/css2?family=Rubik&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.min.js"></script>
@@ -126,263 +126,242 @@
             font-weight: bold;
         }
 
-        button[type="submit"],
-        #cancelOrderBtn {
-            display: block;
-            margin: 20px auto 0;
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            background-color: #2e7d32;
-            color: white;
+        button[type="submit"], button.cancel {
+            margin-top: 30px;
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: bold;
             border: none;
-            border-radius: 8px;
+            border-radius: 15px;
+            background-color: #4caf50;
+            color: white;
             cursor: pointer;
             transition: background-color 0.2s ease;
         }
 
-        #cancelOrderBtn {
-            background-color: #c62828;
+        button.cancel {
+            background-color: #b71c1c;
+            margin-top: 10px;
         }
 
         button[type="submit"]:hover {
-            background-color: #1b4d18;
+            background-color: #388e3c;
         }
 
-        #cancelOrderBtn:hover {
-            background-color: #8b1a1a;
-        }
-
-        .message {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        #orderForm {
-            display: none;
+        button.cancel:hover {
+            background-color: #7f0000;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>🍽️ Bestel je maaltijd</h2>
+        <h2>Bestel je producten</h2>
 
-        <!-- Keuze: Mee nemen of Afhalen -->
+        <!-- Kies type bestelling -->
         <div class="order-type" id="orderTypeSelection">
-            <button id="btnTakeaway">Mee nemen</button>
-            <button id="btnPickup">Afhalen</button>
+            <button id="btnPickup" data-type="pickup">Ter plaatse eten</button>
+            <button id="btnTakeaway" data-type="takeaway">Afhalen</button>
         </div>
 
-        <!-- Bestelformulier, eerst verborgen -->
-        <form id="orderForm">
-            <div class="products" id="productList"></div>
-            <div class="total">Totaal: €<span id="totaal">0.00</span></div>
+        <!-- Productlijst -->
+        <div class="products" id="productsContainer" style="display:none;"></div>
+
+        <!-- Bestelformulier -->
+        <form id="orderForm" style="display:none;">
+            <h3>Bestelformulier</h3>
+            <div id="orderItems"></div>
             <button type="submit">Bestelling plaatsen</button>
-            <button type="button" id="cancelOrderBtn">Annuleer bestelling</button>
-            <div class="message" id="message"></div>
+            <button type="button" class="cancel" id="cancelOrderBtn">Annuleer bestelling</button>
         </form>
     </div>
 
     <script>
-        // Ophalen kiosknummer uit URL ?kiosk=1
-        const urlParams = new URLSearchParams(window.location.search);
-        const kiosk = parseInt(urlParams.get('kiosk')) || null;
+        const backendUrl = 'https://bestel-backend.onrender.com'; // Pas aan indien nodig
 
-        const btnTakeaway = document.getElementById('btnTakeaway');
-        const btnPickup = document.getElementById('btnPickup');
-        const form = document.getElementById('orderForm');
-        const productList = document.getElementById('productList');
-        const totaalSpan = document.getElementById('totaal');
-        const message = document.getElementById('message');
-        const cancelBtn = document.getElementById('cancelOrderBtn');
+        let selectedOrderType = null;
+        let producten = [];
+        let bestelling = [];
+
         const orderTypeSelection = document.getElementById('orderTypeSelection');
+        const btnPickup = document.getElementById('btnPickup');
+        const btnTakeaway = document.getElementById('btnTakeaway');
+        const productsContainer = document.getElementById('productsContainer');
+        const orderForm = document.getElementById('orderForm');
+        const orderItemsDiv = document.getElementById('orderItems');
+        const cancelOrderBtn = document.getElementById('cancelOrderBtn');
 
-        let bestelling = {};
-        let orderType = null;
+        // Kies bestel type (afhalen of ter plaatse)
+        btnPickup.addEventListener('click', () => selectOrderType('pickup'));
+        btnTakeaway.addEventListener('click', () => selectOrderType('takeaway'));
 
-        // Update totaalprijs onderaan
-        function updateTotaal() {
-            let totaal = 0;
-            for (const naam in bestelling) {
-                const item = bestelling[naam];
-                totaal += item.quantity * item.prijs;
-            }
-            totaalSpan.textContent = totaal.toFixed(2);
-        }
+        function selectOrderType(type) {
+            selectedOrderType = type;
+            // Visueel knop selecteren
+            btnPickup.classList.toggle('selected', type === 'pickup');
+            btnTakeaway.classList.toggle('selected', type === 'takeaway');
 
-        // Product kaartje maken
-        function createProductCard(product) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'product';
-            wrapper.innerHTML = `
-                    <img src="${product.image}" alt="${product.naam}" />
-                    <div class="product-info">
-                        <h3>${product.naam}</h3>
-                        <p>Prijs: €${product.prijs.toFixed(2)}</p>
-                        <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
-                    </div>
-                    <div class="product-controls">
-                        <button type="button" class="plus">+</button>
-                        <span>0</span>
-                        <button type="button" class="minus">−</button>
-                    </div>
-                `;
-            const plusBtn = wrapper.querySelector('.plus');
-            const minBtn = wrapper.querySelector('.minus');
-            const qtySpan = wrapper.querySelector('span');
-            const opmerkingField = wrapper.querySelector('.opmerking');
-
-            plusBtn.addEventListener('click', () => {
-                let q = bestelling[product.naam] ? bestelling[product.naam].quantity : 0;
-                q++;
-                bestelling[product.naam] = {
-                    prijs: product.prijs,
-                    quantity: q,
-                    opmerking: opmerkingField.value
-                };
-                qtySpan.textContent = q;
-                opmerkingField.style.display = 'block';
-                updateTotaal();
-            });
-
-            minBtn.addEventListener('click', () => {
-                let q = bestelling[product.naam] ? bestelling[product.naam].quantity : 0;
-                if (q > 0) {
-                    q--;
-                    if (q === 0) {
-                        delete bestelling[product.naam];
-                        opmerkingField.style.display = 'none';
-                    } else {
-                        bestelling[product.naam].quantity = q;
-                    }
-                    qtySpan.textContent = q;
-                    updateTotaal();
-                }
-            });
-
-            opmerkingField.addEventListener('input', () => {
-                if (bestelling[product.naam]) {
-                    bestelling[product.naam].opmerking = opmerkingField.value;
-                }
-            });
-
-            return wrapper;
-        }
-
-        // Producten ophalen van backend
-        function loadProducts() {
-            productList.innerHTML = ''; // leeg eerst de lijst
-            bestelling = {};
-            updateTotaal();
-
-            fetch('https://bestel-backend.onrender.com/products')
-                .then(res => res.json())
-                .then(data => {
-                    if (!Array.isArray(data)) throw new Error('Ongeldige data ontvangen');
-                    data.forEach(p => {
-                        const el = createProductCard(p);
-                        productList.appendChild(el);
-                    });
-                })
-                .catch(err => {
-                    console.error('⛔ Fout bij laden producten:', err);
-                    message.textContent = '⛔ Kan producten niet ophalen.';
-                    message.style.color = 'red';
-                });
-        }
-
-        // Toon bestelformulier & verberg keuzeknoppen
-        function showOrderForm() {
-            orderTypeSelection.style.display = 'none';
-            form.style.display = 'block';
-            message.textContent = '';
+            // Producten laden
             loadProducts();
         }
 
-        // Reset naar start (keuze tonen, formulier verbergen, reset alles)
-        function resetOrder() {
-            bestelling = {};
-            orderType = null;
-            form.reset();
-            productList.innerHTML = '';
-            updateTotaal();
-            message.textContent = '';
-            btnTakeaway.classList.remove('selected');
-            btnPickup.classList.remove('selected');
-            form.style.display = 'none';
-            orderTypeSelection.style.display = 'block';
+        async function loadProducts() {
+            try {
+                const res = await fetch(`${backendUrl}/products`);
+                if (!res.ok) throw new Error('Kan producten niet ophalen.');
+                producten = await res.json();
+
+                showProducts();
+            } catch (error) {
+                alert('⛔ Kan producten niet ophalen.');
+                console.error('Fout bij laden producten:', error);
+            }
         }
 
-        // Keuze knoppen event handlers
-        btnTakeaway.addEventListener('click', () => {
-            orderType = 'mee nemen';
-            btnTakeaway.classList.add('selected');
-            btnPickup.classList.remove('selected');
-            showOrderForm();
-        });
+        function showProducts() {
+            orderTypeSelection.style.display = 'none';
+            orderForm.style.display = 'none';
+            productsContainer.style.display = 'flex';
 
-        btnPickup.addEventListener('click', () => {
-            orderType = 'afhalen';
-            btnPickup.classList.add('selected');
-            btnTakeaway.classList.remove('selected');
-            showOrderForm();
-        });
+            productsContainer.innerHTML = '';
 
-        // Annuleer knop event handler
-        cancelBtn.addEventListener('click', () => {
-            if (confirm('Weet je zeker dat je de bestelling wilt annuleren?')) {
-                resetOrder();
-            }
-        });
+            producten.forEach((product, i) => {
+                const productEl = document.createElement('div');
+                productEl.className = 'product';
 
-        // Bestelformulier versturen
-        form.addEventListener('submit', e => {
-            e.preventDefault();
-            message.textContent = '';
-            // controleer of er producten zijn gekozen
-            if (Object.keys(bestelling).length === 0) {
-                message.textContent = 'Je hebt nog geen producten toegevoegd.';
-                message.style.color = 'red';
+                productEl.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
+                            <div class="product-info">
+                                <h3>${product.naam}</h3>
+                                <p>€${product.prijs.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div class="product-controls">
+                            <button data-index="${i}" class="btn-decrease">-</button>
+                            <span id="qty-${i}">0</span>
+                            <button data-index="${i}" class="btn-increase">+</button>
+                            <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
+                        </div>
+                    `;
+
+                productsContainer.appendChild(productEl);
+
+                const btnInc = productEl.querySelector('.btn-increase');
+                const btnDec = productEl.querySelector('.btn-decrease');
+                const note = productEl.querySelector('textarea');
+
+                btnInc.addEventListener('click', () => {
+                    let currentQty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                    currentQty++;
+                    document.getElementById(`qty-${i}`).textContent = currentQty;
+                    note.style.display = currentQty > 0 ? 'block' : 'none';
+                });
+
+                btnDec.addEventListener('click', () => {
+                    let currentQty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                    if (currentQty > 0) {
+                        currentQty--;
+                        document.getElementById(`qty-${i}`).textContent = currentQty;
+                        note.style.display = currentQty > 0 ? 'block' : 'none';
+                        if (currentQty === 0) note.value = '';
+                    }
+                });
+            });
+
+            // Toon knop om naar bestelformulier te gaan
+            const btnNext = document.createElement('button');
+            btnNext.textContent = 'Verder naar bestelling';
+            btnNext.style.marginTop = '20px';
+            btnNext.style.padding = '16px';
+            btnNext.style.fontSize = '1.2rem';
+            btnNext.style.width = '100%';
+            btnNext.style.backgroundColor = '#4caf50';
+            btnNext.style.color = 'white';
+            btnNext.style.border = 'none';
+            btnNext.style.borderRadius = '15px';
+            btnNext.style.cursor = 'pointer';
+            productsContainer.appendChild(btnNext);
+
+            btnNext.addEventListener('click', (e) => {
+                e.preventDefault();
+                prepareOrderForm();
+            });
+        }
+
+        function prepareOrderForm() {
+            bestelling = [];
+
+            producten.forEach((product, i) => {
+                const qty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                const opmerking = document.getElementById(`note-${i}`).value.trim();
+                if (qty > 0) {
+                    bestelling.push({
+                        item: product.naam,
+                        quantity: qty,
+                        opmerking: opmerking || ''
+                    });
+                }
+            });
+
+            if (bestelling.length === 0) {
+                alert('Selecteer minimaal één product.');
                 return;
             }
 
-            // maak array van producten in juiste vorm
-            const producten = [];
-            for (const naam in bestelling) {
-                producten.push({
-                    naam,
-                    aantal: bestelling[naam].quantity,
-                    opmerking: bestelling[naam].opmerking || ''
-                });
-            }
+            productsContainer.style.display = 'none';
+            orderForm.style.display = 'block';
 
-            // data opsturen naar backend
-            fetch('https://bestel-backend.onrender.com/bestelling', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    producten,
-                    kiosk,
-                    orderType
-                })
-            })
-                .then(res => {
-                    if (!res.ok) throw new Error('Fout bij plaatsen bestelling');
-                    return res.json();
-                })
-                .then(data => {
-                    message.style.color = 'green';
-                    message.textContent = 'Bestelling geplaatst, bedankt!';
-                    resetOrder();
-                })
-                .catch(err => {
-                    message.style.color = 'red';
-                    message.textContent = 'Er is een fout opgetreden bij het plaatsen van je bestelling.';
-                    console.error(err);
-                });
+            // Bestelling overzicht tonen
+            orderItemsDiv.innerHTML = bestelling.map(p => `
+                    <p><strong>${p.item}</strong> x ${p.quantity} ${p.opmerking ? `- ${p.opmerking}` : ''}</p>
+                `).join('');
+        }
+
+        // Cancel knop terug naar begin
+        cancelOrderBtn.addEventListener('click', () => {
+            orderForm.style.display = 'none';
+            productsContainer.style.display = 'none';
+            orderTypeSelection.style.display = 'block';
+
+            // Reset selectie en bestelling
+            selectedOrderType = null;
+            btnPickup.classList.remove('selected');
+            btnTakeaway.classList.remove('selected');
+            bestelling = [];
         });
 
-        // Startpagina: formulier verbergen, keuze tonen
-        resetOrder();
+        // Bestelling versturen
+        orderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                const res = await fetch(`${backendUrl}/order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        producten: bestelling,
+                        type: selectedOrderType
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert('⛔ Fout bij plaatsen bestelling: ' + (data.message || 'Onbekende fout'));
+                    return;
+                }
+
+                alert('✅ Bestelling geplaatst!');
+
+                // Terug naar start
+                cancelOrderBtn.click();
+
+            } catch (error) {
+                alert('⛔ Fout bij plaatsen bestelling.');
+                console.error(error);
+            }
+        });
     </script>
 </body>
 </html>
