@@ -16,7 +16,7 @@
             margin: 0;
         }
 
-        h2, h3 {
+        h2 {
             text-align: center;
             color: #2e7d32;
             margin-bottom: 30px;
@@ -26,6 +26,27 @@
             max-width: 1000px;
             margin: auto;
         }
+
+        .order-type {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+            .order-type button {
+                font-size: 1.2rem;
+                padding: 12px 20px;
+                margin: 0 10px;
+                border: none;
+                border-radius: 8px;
+                background-color: #4caf50;
+                color: white;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+
+                .order-type button.selected {
+                    background-color: #388e3c;
+                }
 
         .products {
             display: flex;
@@ -127,6 +148,11 @@
     <div class="container">
         <h2>🍽️ Bestel je maaltijd</h2>
 
+        <div class="order-type">
+            <button id="btnTakeaway">Mee nemen</button>
+            <button id="btnPickup">Afhalen</button>
+        </div>
+
         <form id="orderForm">
             <div class="products" id="productList"></div>
             <div class="total">Totaal: €<span id="totaal">0.00</span></div>
@@ -139,12 +165,27 @@
         const urlParams = new URLSearchParams(window.location.search);
         const kiosk = parseInt(urlParams.get('kiosk')) || null;
 
+        const btnTakeaway = document.getElementById('btnTakeaway');
+        const btnPickup = document.getElementById('btnPickup');
         const form = document.getElementById('orderForm');
         const productList = document.getElementById('productList');
         const totaalSpan = document.getElementById('totaal');
         const message = document.getElementById('message');
 
-        const bestelling = {};
+        let bestelling = {};
+        let orderType = null;  // "takeaway" of "pickup"
+
+        // Kiestype knoppen
+        btnTakeaway.addEventListener('click', () => {
+            orderType = "takeaway";
+            btnTakeaway.classList.add('selected');
+            btnPickup.classList.remove('selected');
+        });
+        btnPickup.addEventListener('click', () => {
+            orderType = "pickup";
+            btnPickup.classList.add('selected');
+            btnTakeaway.classList.remove('selected');
+        });
 
         function updateTotaal() {
             let totaal = 0;
@@ -159,19 +200,18 @@
             const wrapper = document.createElement('div');
             wrapper.className = 'product';
             wrapper.innerHTML = `
-                <img src="${product.image}" alt="${product.naam}" />
-                <div class="product-info">
-                    <h3>${product.naam}</h3>
-                    <p>Prijs: €${product.prijs.toFixed(2)}</p>
-                    <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
-                </div>
-                <div class="product-controls">
-                    <button type="button" class="plus">+</button>
-                    <span>0</span>
-                    <button type="button" class="minus">−</button>
-                </div>
-            `;
-
+                    <img src="${product.image}" alt="${product.naam}" />
+                    <div class="product-info">
+                        <h3>${product.naam}</h3>
+                        <p>Prijs: €${product.prijs.toFixed(2)}</p>
+                        <textarea class="opmerking" placeholder="Opmerking voor dit product..."></textarea>
+                    </div>
+                    <div class="product-controls">
+                        <button type="button" class="plus">+</button>
+                        <span>0</span>
+                        <button type="button" class="minus">−</button>
+                    </div>
+                `;
             const plusBtn = wrapper.querySelector('.plus');
             const minBtn = wrapper.querySelector('.minus');
             const qtySpan = wrapper.querySelector('span');
@@ -189,7 +229,6 @@
                 opmerkingField.style.display = 'block';
                 updateTotaal();
             });
-
             minBtn.addEventListener('click', () => {
                 let q = bestelling[product.naam] ? bestelling[product.naam].quantity : 0;
                 if (q > 0) {
@@ -204,13 +243,11 @@
                     updateTotaal();
                 }
             });
-
             opmerkingField.addEventListener('input', () => {
                 if (bestelling[product.naam]) {
                     bestelling[product.naam].opmerking = opmerkingField.value;
                 }
             });
-
             return wrapper;
         }
 
@@ -239,9 +276,14 @@
                 const item = bestelling[naam];
                 producten.push({ item: naam, quantity: item.quantity, opmerking: item.opmerking });
             }
-
             if (producten.length === 0) {
                 message.textContent = '⛔ Voeg eerst producten toe aan je bestelling.';
+                message.style.color = 'red';
+                return;
+            }
+
+            if (!orderType) {
+                message.textContent = '⛔ Kies aub of je mee neemt of afhaalt.';
                 message.style.color = 'red';
                 return;
             }
@@ -255,7 +297,7 @@
             fetch('https://bestel-backend.onrender.com/order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ producten, kiosk })
+                body: JSON.stringify({ producten, kiosk, type: orderType })
             })
                 .then(res => res.json().then(data => ({ ok: res.ok, data })))
                 .then(result => {
@@ -268,9 +310,13 @@
                     message.style.color = 'green';
 
                     form.reset();
-                    Object.keys(bestelling).forEach(k => delete bestelling[k]);
+                    bestelling = {};
                     document.querySelectorAll('.product span').forEach(span => span.textContent = '0');
                     document.querySelectorAll('.opmerking').forEach(o => o.style.display = 'none');
+                    // reset keuze
+                    orderType = null;
+                    btnTakeaway.classList.remove('selected');
+                    btnPickup.classList.remove('selected');
                     updateTotaal();
                 })
                 .catch(err => {
