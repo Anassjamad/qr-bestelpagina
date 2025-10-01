@@ -126,9 +126,10 @@
             font-weight: bold;
         }
 
-        button[type="submit"] {
+        button[type="submit"],
+        #cancelOrderBtn {
             display: block;
-            margin: 30px auto 0;
+            margin: 20px auto 0;
             padding: 12px 30px;
             font-size: 1.1rem;
             background-color: #2e7d32;
@@ -138,9 +139,17 @@
             cursor: pointer;
         }
 
+        #cancelOrderBtn {
+            background-color: #c62828;
+        }
+
         .message {
             text-align: center;
             margin-top: 20px;
+        }
+
+        #orderForm {
+            display: none;
         }
     </style>
 </head>
@@ -148,7 +157,7 @@
     <div class="container">
         <h2>🍽️ Bestel je maaltijd</h2>
 
-        <div class="order-type">
+        <div class="order-type" id="orderTypeSelection">
             <button id="btnTakeaway">Mee nemen</button>
             <button id="btnPickup">Afhalen</button>
         </div>
@@ -157,6 +166,7 @@
             <div class="products" id="productList"></div>
             <div class="total">Totaal: €<span id="totaal">0.00</span></div>
             <button type="submit">Bestelling plaatsen</button>
+            <button type="button" id="cancelOrderBtn">Annuleer bestelling</button>
             <div class="message" id="message"></div>
         </form>
     </div>
@@ -171,21 +181,11 @@
         const productList = document.getElementById('productList');
         const totaalSpan = document.getElementById('totaal');
         const message = document.getElementById('message');
+        const cancelBtn = document.getElementById('cancelOrderBtn');
+        const orderTypeSelection = document.getElementById('orderTypeSelection');
 
         let bestelling = {};
-        let orderType = null;  // "takeaway" of "pickup"
-
-        // Kiestype knoppen
-        btnTakeaway.addEventListener('click', () => {
-            orderType = "takeaway";
-            btnTakeaway.classList.add('selected');
-            btnPickup.classList.remove('selected');
-        });
-        btnPickup.addEventListener('click', () => {
-            orderType = "pickup";
-            btnPickup.classList.add('selected');
-            btnTakeaway.classList.remove('selected');
-        });
+        let orderType = null;
 
         function updateTotaal() {
             let totaal = 0;
@@ -229,6 +229,7 @@
                 opmerkingField.style.display = 'block';
                 updateTotaal();
             });
+
             minBtn.addEventListener('click', () => {
                 let q = bestelling[product.naam] ? bestelling[product.naam].quantity : 0;
                 if (q > 0) {
@@ -243,11 +244,13 @@
                     updateTotaal();
                 }
             });
+
             opmerkingField.addEventListener('input', () => {
                 if (bestelling[product.naam]) {
                     bestelling[product.naam].opmerking = opmerkingField.value;
                 }
             });
+
             return wrapper;
         }
 
@@ -268,65 +271,5 @@
                 });
         }
 
-        form.addEventListener('submit', e => {
-            e.preventDefault();
-
-            const producten = [];
-            for (const naam in bestelling) {
-                const item = bestelling[naam];
-                producten.push({ item: naam, quantity: item.quantity, opmerking: item.opmerking });
-            }
-            if (producten.length === 0) {
-                message.textContent = '⛔ Voeg eerst producten toe aan je bestelling.';
-                message.style.color = 'red';
-                return;
-            }
-
-            if (!orderType) {
-                message.textContent = '⛔ Kies aub of je mee neemt of afhaalt.';
-                message.style.color = 'red';
-                return;
-            }
-
-            if (!kiosk || kiosk < 1) {
-                message.textContent = '⛔ Ongeldig of ontbrekend kiosknummer in URL (gebruik ?kiosk=1).';
-                message.style.color = 'red';
-                return;
-            }
-
-            fetch('https://bestel-backend.onrender.com/order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ producten, kiosk, type: orderType })
-            })
-                .then(res => res.json().then(data => ({ ok: res.ok, data })))
-                .then(result => {
-                    if (!result.ok) {
-                        message.textContent = result.data.message || '⛔ Fout bij plaatsen van bestelling.';
-                        message.style.color = 'red';
-                        return;
-                    }
-                    message.textContent = '✅ Bestelling succesvol geplaatst!';
-                    message.style.color = 'green';
-
-                    form.reset();
-                    bestelling = {};
-                    document.querySelectorAll('.product span').forEach(span => span.textContent = '0');
-                    document.querySelectorAll('.opmerking').forEach(o => o.style.display = 'none');
-                    // reset keuze
-                    orderType = null;
-                    btnTakeaway.classList.remove('selected');
-                    btnPickup.classList.remove('selected');
-                    updateTotaal();
-                })
-                .catch(err => {
-                    console.error('⛔ Fout bij fetch:', err);
-                    message.textContent = '⛔ Er ging iets mis met de verbinding.';
-                    message.style.color = 'red';
-                });
-        });
-
-        loadProducts();
-    </script>
-</body>
-</html>
+        function showOrderForm() {
+            orderTypeSelection.style.display
