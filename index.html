@@ -3,207 +3,87 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bestellen</title>
+    <title>Bestellen & Betalen</title>
     <link href="https://fonts.googleapis.com/css2?family=Rubik&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/promise-polyfill@8/dist/polyfill.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/regenerator-runtime@0.13.11/runtime.min.js"></script>
-    <style>
-        body {
-            font-family: 'Rubik', sans-serif;
-            background-color: #f4fdf7;
-            padding: 40px;
-            margin: 0;
-        }
+    <script type="module">
+        import { StripeTerminal } from 'https://js.stripe.com/terminal/v1/terminal.mjs';
 
-        h2 {
-            text-align: center;
-            color: #2e7d32;
-            margin-bottom: 30px;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: auto;
-        }
-
-        .order-type {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-            .order-type button {
-                font-size: 1.2rem;
-                padding: 12px 20px;
-                margin: 0 10px;
-                border: none;
-                border-radius: 8px;
-                background-color: #4caf50;
-                color: white;
-                cursor: pointer;
-                transition: background-color 0.2s ease;
-            }
-
-                .order-type button.selected {
-                    background-color: #388e3c;
-                }
-
-        .products {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .product {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-        }
-
-            .product img {
-                width: 100px;
-                height: 100px;
-                border-radius: 10px;
-                object-fit: cover;
-                margin-right: 20px;
-            }
-
-        .product-info {
-            flex: 1;
-        }
-
-            .product-info h3 {
-                margin: 0;
-                color: #333;
-            }
-
-            .product-info p {
-                margin: 8px 0;
-                color: #666;
-            }
-
-        .product-controls {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            margin-left: 20px;
-        }
-
-            .product-controls button {
-                background-color: #4caf50;
-                color: white;
-                border: none;
-                padding: 6px 12px;
-                font-size: 1.2rem;
-                border-radius: 6px;
-                cursor: pointer;
-            }
-
-            .product-controls span {
-                font-weight: bold;
-                font-size: 1.1rem;
-            }
-
-        .opmerking {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            display: none;
-        }
-
-        .total {
-            text-align: center;
-            font-size: 1.4rem;
-            margin-top: 30px;
-            font-weight: bold;
-        }
-
-        button[type="submit"], button.cancel {
-            margin-top: 30px;
-            width: 100%;
-            padding: 18px;
-            font-size: 1.3rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 15px;
-            background-color: #4caf50;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        button.cancel {
-            background-color: #b71c1c;
-            margin-top: 10px;
-        }
-
-        button[type="submit"]:hover {
-            background-color: #388e3c;
-        }
-
-        button.cancel:hover {
-            background-color: #7f0000;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Bestel je producten</h2>
-        <div id="kioskDisplay" style="margin-bottom: 20px; font-weight: bold;"></div>
-
-        <!-- Kies type bestelling -->
-        <div class="order-type" id="orderTypeSelection">
-            <button id="btnPickup" data-type="pickup">Ter plaatse eten</button>
-            <button id="btnTakeaway" data-type="takeaway">Afhalen</button>
-        </div>
-
-        <!-- Productlijst -->
-        <div class="products" id="productsContainer" style="display:none;"></div>
-
-        <!-- Bestelformulier -->
-        <form id="orderForm" style="display:none;">
-            <h3>Bestelformulier</h3>
-            <div id="orderItems"></div>
-            <button type="submit">Bestelling plaatsen</button>
-            <button type="button" class="cancel" id="cancelOrderBtn">Annuleer bestelling</button>
-        </form>
-    </div>
-
-    <script>
         const backendUrl = 'https://bestel-backend.onrender.com';
+        const terminal = StripeTerminal.create({
+            onUnexpectedReaderDisconnect: () => {
+                alert('Reader onverwacht losgekoppeld!');
+            }
+        });
 
-        // 🧠 Kiosk-nummer uit URL halen
+        // Kiosk nummer uit URL
         const urlParams = new URLSearchParams(window.location.search);
         const selectedKiosk = parseInt(urlParams.get('kiosk'));
-
         if (!selectedKiosk) {
             alert("⛔ Kiosknummer ontbreekt in de URL. Voeg '?kiosk=1' toe.");
             document.body.innerHTML = '<h1 style="color:red; text-align:center;">Kiosk niet gespecificeerd. Voeg ?kiosk=1 toe aan de URL.</h1>';
             throw new Error("Geen kiosknummer in URL.");
-        } else {
-            document.getElementById("kioskDisplay").textContent = `Bestellen vanaf kiosk ${selectedKiosk}`;
         }
 
         let selectedOrderType = null;
         let producten = [];
         let bestelling = [];
 
-        const orderTypeSelection = document.getElementById('orderTypeSelection');
-        const btnPickup = document.getElementById('btnPickup');
-        const btnTakeaway = document.getElementById('btnTakeaway');
-        const productsContainer = document.getElementById('productsContainer');
-        const orderForm = document.getElementById('orderForm');
-        const orderItemsDiv = document.getElementById('orderItems');
-        const cancelOrderBtn = document.getElementById('cancelOrderBtn');
+        // DOM-elementen
+        const kioskDisplay = document.createElement('div');
+        kioskDisplay.textContent = `Bestellen vanaf kiosk ${selectedKiosk}`;
+        kioskDisplay.style.fontWeight = 'bold';
+        kioskDisplay.style.marginBottom = '20px';
+        document.body.prepend(kioskDisplay);
 
+        const orderTypeDiv = document.createElement('div');
+        orderTypeDiv.className = 'order-type';
+        const btnPickup = document.createElement('button');
+        btnPickup.textContent = 'Ter plaatse eten';
+        btnPickup.dataset.type = 'pickup';
+        const btnTakeaway = document.createElement('button');
+        btnTakeaway.textContent = 'Afhalen';
+        btnTakeaway.dataset.type = 'takeaway';
+        orderTypeDiv.appendChild(btnPickup);
+        orderTypeDiv.appendChild(btnTakeaway);
+        document.body.appendChild(orderTypeDiv);
+
+        const productsContainer = document.createElement('div');
+        productsContainer.className = 'products';
+        productsContainer.style.display = 'none';
+        document.body.appendChild(productsContainer);
+
+        const orderForm = document.createElement('form');
+        orderForm.id = 'orderForm';
+        orderForm.style.display = 'none';
+        document.body.appendChild(orderForm);
+
+        const orderItemsDiv = document.createElement('div');
+        orderForm.appendChild(orderItemsDiv);
+
+        const submitOrderBtn = document.createElement('button');
+        submitOrderBtn.type = 'submit';
+        submitOrderBtn.textContent = 'Bestelling plaatsen';
+        orderForm.appendChild(submitOrderBtn);
+
+        const cancelOrderBtn = document.createElement('button');
+        cancelOrderBtn.type = 'button';
+        cancelOrderBtn.textContent = 'Annuleer bestelling';
+        cancelOrderBtn.className = 'cancel';
+        orderForm.appendChild(cancelOrderBtn);
+
+        // Stripe Terminal buttons
+        const connectReaderBtn = document.createElement('button');
+        connectReaderBtn.textContent = 'Connect Wisepad 3';
+        document.body.appendChild(connectReaderBtn);
+
+        const payBtn = document.createElement('button');
+        payBtn.textContent = 'Pay €5.00';
+        document.body.appendChild(payBtn);
+
+        // ------------------ Events ------------------
         btnPickup.addEventListener('click', () => selectOrderType('pickup'));
         btnTakeaway.addEventListener('click', () => selectOrderType('takeaway'));
 
@@ -211,7 +91,6 @@
             selectedOrderType = type;
             btnPickup.classList.toggle('selected', type === 'pickup');
             btnTakeaway.classList.toggle('selected', type === 'takeaway');
-
             loadProducts();
         }
 
@@ -221,39 +100,36 @@
                 if (!res.ok) throw new Error('Kan producten niet ophalen.');
                 producten = await res.json();
                 showProducts();
-            } catch (error) {
+            } catch (err) {
                 alert('⛔ Kan producten niet ophalen.');
-                console.error('Fout bij laden producten:', error);
+                console.error(err);
             }
         }
 
         function showProducts() {
-            orderTypeSelection.style.display = 'none';
+            orderTypeDiv.style.display = 'none';
             orderForm.style.display = 'none';
             productsContainer.style.display = 'flex';
-
             productsContainer.innerHTML = '';
 
             producten.forEach((product, i) => {
                 const productEl = document.createElement('div');
                 productEl.className = 'product';
-
                 productEl.innerHTML = `
-                        <div style="display:flex; align-items:center;">
-                            <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
-                            <div class="product-info">
-                                <h3>${product.naam}</h3>
-                                <p>€${product.prijs.toFixed(2)}</p>
-                            </div>
+                    <div style="display:flex; align-items:center;">
+                        <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
+                        <div class="product-info">
+                            <h3>${product.naam}</h3>
+                            <p>€${product.prijs.toFixed(2)}</p>
                         </div>
-                        <div class="product-controls">
-                            <button data-index="${i}" class="btn-decrease">-</button>
-                            <span id="qty-${i}">0</span>
-                            <button data-index="${i}" class="btn-increase">+</button>
-                            <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
-                        </div>
-                    `;
-
+                    </div>
+                    <div class="product-controls">
+                        <button class="btn-decrease" data-index="${i}">-</button>
+                        <span id="qty-${i}">0</span>
+                        <button class="btn-increase" data-index="${i}">+</button>
+                        <textarea class="opmerking" id="note-${i}" placeholder="Opmerking (optioneel)" style="display:none;"></textarea>
+                    </div>
+                `;
                 productsContainer.appendChild(productEl);
 
                 const btnInc = productEl.querySelector('.btn-increase');
@@ -261,36 +137,23 @@
                 const note = productEl.querySelector('textarea');
 
                 btnInc.addEventListener('click', () => {
-                    let currentQty = parseInt(document.getElementById(`qty-${i}`).textContent);
-                    currentQty++;
-                    document.getElementById(`qty-${i}`).textContent = currentQty;
-                    note.style.display = currentQty > 0 ? 'block' : 'none';
+                    let qty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                    qty++;
+                    document.getElementById(`qty-${i}`).textContent = qty;
+                    note.style.display = qty > 0 ? 'block' : 'none';
                 });
-
                 btnDec.addEventListener('click', () => {
-                    let currentQty = parseInt(document.getElementById(`qty-${i}`).textContent);
-                    if (currentQty > 0) {
-                        currentQty--;
-                        document.getElementById(`qty-${i}`).textContent = currentQty;
-                        note.style.display = currentQty > 0 ? 'block' : 'none';
-                        if (currentQty === 0) note.value = '';
-                    }
+                    let qty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                    if (qty > 0) qty--;
+                    document.getElementById(`qty-${i}`).textContent = qty;
+                    note.style.display = qty > 0 ? 'block' : 'none';
+                    if (qty === 0) note.value = '';
                 });
             });
 
             const btnNext = document.createElement('button');
             btnNext.textContent = 'Verder naar bestelling';
-            btnNext.style.marginTop = '20px';
-            btnNext.style.padding = '16px';
-            btnNext.style.fontSize = '1.2rem';
-            btnNext.style.width = '100%';
-            btnNext.style.backgroundColor = '#4caf50';
-            btnNext.style.color = 'white';
-            btnNext.style.border = 'none';
-            btnNext.style.borderRadius = '15px';
-            btnNext.style.cursor = 'pointer';
             productsContainer.appendChild(btnNext);
-
             btnNext.addEventListener('click', (e) => {
                 e.preventDefault();
                 prepareOrderForm();
@@ -299,17 +162,10 @@
 
         function prepareOrderForm() {
             bestelling = [];
-
             producten.forEach((product, i) => {
                 const qty = parseInt(document.getElementById(`qty-${i}`).textContent);
-                const opmerking = document.getElementById(`note-${i}`).value.trim();
-                if (qty > 0) {
-                    bestelling.push({
-                        item: product.naam,
-                        quantity: qty,
-                        opmerking: opmerking || ''
-                    });
-                }
+                const note = document.getElementById(`note-${i}`).value.trim();
+                if (qty > 0) bestelling.push({ item: product.naam, quantity: qty, opmerking: note || '' });
             });
 
             if (bestelling.length === 0) {
@@ -320,15 +176,13 @@
             productsContainer.style.display = 'none';
             orderForm.style.display = 'block';
 
-            orderItemsDiv.innerHTML = bestelling.map(p => `
-                    <p><strong>${p.item}</strong> x ${p.quantity} ${p.opmerking ? `- ${p.opmerking}` : ''}</p>
-                `).join('');
+            orderItemsDiv.innerHTML = bestelling.map(p => `<p><strong>${p.item}</strong> x ${p.quantity} ${p.opmerking ? `- ${p.opmerking}` : ''}</p>`).join('');
         }
 
         cancelOrderBtn.addEventListener('click', () => {
             orderForm.style.display = 'none';
             productsContainer.style.display = 'none';
-            orderTypeSelection.style.display = 'block';
+            orderTypeDiv.style.display = 'block';
             selectedOrderType = null;
             btnPickup.classList.remove('selected');
             btnTakeaway.classList.remove('selected');
@@ -337,33 +191,63 @@
 
         orderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
             try {
                 const res = await fetch(`${backendUrl}/order`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        producten: bestelling,
-                        type: selectedOrderType,
-                        kiosk: selectedKiosk // ✅ kiosknummer meesturen
-                    })
+                    body: JSON.stringify({ producten: bestelling, type: selectedOrderType, kiosk: selectedKiosk })
                 });
-
                 const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Onbekende fout');
+                alert('✅ Bestelling geplaatst!');
+                cancelOrderBtn.click();
+            } catch (err) {
+                alert('⛔ Fout bij plaatsen bestelling: ' + err.message);
+                console.error(err);
+            }
+        });
 
-                if (!res.ok) {
-                    alert('⛔ Fout bij plaatsen bestelling: ' + (data.message || 'Onbekende fout'));
+        // ------------------ Stripe Terminal ------------------
+        connectReaderBtn.addEventListener('click', async () => {
+            try {
+                const res = await fetch(`${backendUrl}/connection_token`, { method: 'POST' });
+                const data = await res.json();
+                const token = data.secret;
+
+                const discoveredReaders = await terminal.discoverReaders({ method: 'bluetooth' });
+                if (discoveredReaders.length === 0) {
+                    alert('Geen readers gevonden.');
                     return;
                 }
 
-                alert('✅ Bestelling geplaatst!');
-                cancelOrderBtn.click();
-            } catch (error) {
-                alert('⛔ Fout bij plaatsen bestelling.');
-                console.error(error);
+                const reader = await terminal.connectReader(discoveredReaders[0], token);
+                alert(`Verbonden met reader: ${reader.label || reader.serial_number}`);
+            } catch (err) {
+                console.error(err);
+                alert('Fout bij verbinden met reader: ' + err.message);
+            }
+        });
+
+        payBtn.addEventListener('click', async () => {
+            try {
+                const piRes = await fetch(`${backendUrl}/create-payment-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: 500 }) // €5.00
+                });
+                const piData = await piRes.json();
+
+                await terminal.collectPaymentMethod(piData.clientSecret);
+                await terminal.processPayment(piData.clientSecret);
+
+                alert('✅ Betaling voltooid!');
+            } catch (err) {
+                console.error(err);
+                alert('⛔ Fout bij betaling: ' + err.message);
             }
         });
     </script>
+</head>
+<body>
 </body>
-
 </html>
