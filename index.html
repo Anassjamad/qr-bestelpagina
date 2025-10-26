@@ -212,37 +212,57 @@
             producten.forEach((product, i) => {
                 const div = document.createElement('div'); div.className = 'product';
                 div.innerHTML = `
-                        <div style="display:flex;align-items:center;">
-                            <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
-                            <div class="product-info">
-                                <h3>${product.naam}</h3>
-                                <p>€${product.prijs.toFixed(2)}</p>
-                            </div>
+                    <div style="display:flex;align-items:center;">
+                        <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
+                        <div class="product-info">
+                            <h3>${product.naam}</h3>
+                            <p>€${product.prijs.toFixed(2)}</p>
                         </div>
-                        <div class="product-controls">
-                            <button data-index="${i}" class="btn-decrease">-</button>
-                            <span id="qty-${i}">0</span>
-                            <button data-index="${i}" class="btn-increase">+</button>
-                            <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
-                        </div>
-                    `;
+                    </div>
+                    <div class="product-controls">
+                        <button data-index="${i}" class="btn-decrease">-</button>
+                        <span id="qty-${i}">0</span>
+                        <button data-index="${i}" class="btn-increase">+</button>
+                        <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
+                    </div>
+                `;
                 productsContainer.appendChild(div);
+
                 const btnInc = div.querySelector('.btn-increase');
                 const btnDec = div.querySelector('.btn-decrease');
                 const note = div.querySelector('textarea');
 
-                btnInc.addEventListener('click', () => { let q = parseInt(document.getElementById(`qty-${i}`).textContent); q++; document.getElementById(`qty-${i}`).textContent = q; note.style.display = q > 0 ? 'block' : 'none'; });
-                btnDec.addEventListener('click', () => { let q = parseInt(document.getElementById(`qty-${i}`).textContent); if (q > 0) { q--; document.getElementById(`qty-${i}`).textContent = q; note.style.display = q > 0 ? 'block' : 'none'; if (q === 0) note.value = ''; } });
+                btnInc.addEventListener('click', () => {
+                    let q = parseInt(document.getElementById(`qty-${i}`).textContent);
+                    q++;
+                    document.getElementById(`qty-${i}`).textContent = q;
+                    note.style.display = q > 0 ? 'block' : 'none';
+                });
+                btnDec.addEventListener('click', () => {
+                    let q = parseInt(document.getElementById(`qty-${i}`).textContent);
+                    if (q > 0) {
+                        q--;
+                        document.getElementById(`qty-${i}`).textContent = q;
+                        note.style.display = q > 0 ? 'block' : 'none';
+                        if (q === 0) note.value = '';
+                    }
+                });
             });
 
-            const btnNext = document.createElement('button'); btnNext.textContent = 'Verder naar bestelling';
+            const btnNext = document.createElement('button');
+            btnNext.textContent = 'Verder naar bestelling';
             btnNext.style.cssText = 'margin-top:20px;padding:16px;font-size:1.2rem;width:100%;background-color:#4caf50;color:white;border:none;border-radius:15px;cursor:pointer;';
             productsContainer.appendChild(btnNext);
             btnNext.addEventListener('click', (e) => { e.preventDefault(); prepareOrderForm(); });
         }
 
         function prepareOrderForm() {
-            bestelling = []; producten.forEach((p, i) => { const qty = parseInt(document.getElementById(`qty-${i}`).textContent); const note = document.getElementById(`note-${i}`).value.trim(); if (qty > 0) bestelling.push({ item: p.naam, quantity: qty, opmerking: note || '', prijs: p.prijs }); });
+            bestelling = [];
+            producten.forEach((p, i) => {
+                const qty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                const note = document.getElementById(`note-${i}`).value.trim();
+                if (qty > 0) bestelling.push({ item: p.naam, quantity: qty, opmerking: note || '', prijs: p.prijs });
+            });
             if (bestelling.length === 0) { alert('Selecteer minimaal één product.'); return; }
             productsContainer.style.display = 'none';
             orderForm.style.display = 'block';
@@ -250,35 +270,69 @@
         }
 
         cancelOrderBtn.addEventListener('click', () => {
-            orderForm.style.display = 'none'; productsContainer.style.display = 'none';
+            orderForm.style.display = 'none';
+            productsContainer.style.display = 'none';
             document.getElementById('orderTypeSelection').style.display = 'block';
-            selectedOrderType = null; btnPickup.classList.remove('selected'); btnTakeaway.classList.remove('selected'); bestelling = [];
+            selectedOrderType = null;
+            btnPickup.classList.remove('selected');
+            btnTakeaway.classList.remove('selected');
+            bestelling = [];
         });
 
         orderForm.addEventListener('submit', async e => {
             e.preventDefault();
             try {
-                const res = await fetch(`${backendUrl}/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ producten: bestelling, type: selectedOrderType, kiosk: selectedKiosk }) });
-                const orderData = await res.json(); if (!res.ok) { alert('⛔ Fout bij plaatsen bestelling: ' + (orderData.message || 'Onbekend')); return; }
+                // 1️⃣ Bestelling plaatsen
+                const res = await fetch(`${backendUrl}/order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ producten: bestelling, type: selectedOrderType, kiosk: selectedKiosk })
+                });
+                const orderData = await res.json();
+                if (!res.ok) { alert('⛔ Fout bij plaatsen bestelling: ' + (orderData.message || 'Onbekend')); return; }
+
                 const orderId = orderData.order.orderId;
                 const amount = Math.round(bestelling.reduce((sum, p) => sum + p.quantity * p.prijs, 0) * 100);
 
-                const piRes = await fetch(`${backendUrl}/create_payment_intent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, amount }) });
-                const piData = await piRes.json(); if (!piRes.ok) { alert('⛔ Fout bij betaling: ' + (piData.message || 'Onbekend')); return; }
+                // 2️⃣ PaymentIntent ophalen
+                const piRes = await fetch(`${backendUrl}/create_payment_intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId, amount })
+                });
+                const piData = await piRes.json();
+                if (!piRes.ok) { alert('⛔ Fout bij betaling: ' + (piData.message || 'Onbekend')); return; }
                 const clientSecret = piData.clientSecret;
 
-                const tokenRes = await fetch(`${backendUrl}/connection_token`, { method: 'POST' }); const tokenData = await tokenRes.json();
-                const terminal = StripeTerminal.create({ onFetchConnectionToken: async callback => callback({ secret: tokenData.secret }), onUnexpectedReaderDisconnect: () => alert('Reader disconnected!') });
-                const readers = await terminal.discoverReaders({ simulated: false }); if (!readers.length) { alert('⛔ Geen readers gevonden'); return; }
-                await terminal.connectReader(readers[0]);
+                // 3️⃣ Terminal initialiseren
+                const tokenRes = await fetch(`${backendUrl}/connection_token`, { method: 'POST' });
+                const tokenData = await tokenRes.json();
+                const terminal = StripeTerminal.create({
+                    onFetchConnectionToken: async () => tokenData.secret,
+                    onUnexpectedReaderDisconnect: () => alert('Reader disconnected!')
+                });
 
-                const payment = await terminal.collectPaymentMethod(clientSecret);
-                const result = await terminal.processPayment(payment);
+                // 4️⃣ Reader discovery en connectie
+                const discovered = await terminal.discoverReaders({ simulated: false });
+                if (!discovered.length) { alert('⛔ Geen readers gevonden'); return; }
+                await terminal.connectReader(discovered[0]);
 
-                if (result.paymentIntent.status === 'succeeded') { alert('✅ Betaling gelukt! Bestelling geplaatst.'); cancelOrderBtn.click(); }
-                else alert('⛔ Betaling mislukt of geannuleerd.');
-            } catch (error) { alert('⛔ Fout tijdens bestelling/betaling.'); console.error(error); }
+                // 5️⃣ Betaling verwerken
+                const paymentIntent = await terminal.collectPaymentMethod(clientSecret);
+                const result = await terminal.processPayment(paymentIntent);
+
+                if (result.paymentIntent.status === 'succeeded') {
+                    alert('✅ Betaling gelukt! Bestelling geplaatst.');
+                    cancelOrderBtn.click();
+                } else {
+                    alert('⛔ Betaling mislukt of geannuleerd.');
+                }
+            } catch (error) {
+                alert('⛔ Fout tijdens bestelling/betaling.');
+                console.error(error);
+            }
         });
     </script>
+
 </body>
 </html>
