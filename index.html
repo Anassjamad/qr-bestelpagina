@@ -281,7 +281,10 @@
                 if (!res.ok) throw new Error('Kan producten niet ophalen.');
                 producten = await res.json();
                 showProducts();
-            } catch (error) { alert('⛔ Kan producten niet ophalen.'); console.error(error); }
+            } catch (error) {
+                alert('⛔ Kan producten niet ophalen.');
+                console.error(error);
+            }
         }
 
         function showProducts() {
@@ -290,18 +293,19 @@
             productsContainer.innerHTML = '';
 
             producten.forEach((product, i) => {
-                const div = document.createElement('div'); div.className = 'product';
+                const div = document.createElement('div');
+                div.className = 'product';
                 div.innerHTML = `
-                        <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
-                        <h3>${product.naam}</h3>
-                        <p>€${product.prijs.toFixed(2)}</p>
-                        <div class="product-controls">
-                            <button data-index="${i}" class="btn-decrease">-</button>
-                            <span id="qty-${i}">0</span>
-                            <button data-index="${i}" class="btn-increase">+</button>
-                        </div>
-                        <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
-                    `;
+                    <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
+                    <h3>${product.naam}</h3>
+                    <p>€${product.prijs.toFixed(2)}</p>
+                    <div class="product-controls">
+                        <button data-index="${i}" class="btn-decrease">-</button>
+                        <span id="qty-${i}">0</span>
+                        <button data-index="${i}" class="btn-increase">+</button>
+                    </div>
+                    <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
+                `;
                 productsContainer.appendChild(div);
 
                 const btnInc = div.querySelector('.btn-increase');
@@ -310,13 +314,19 @@
 
                 btnInc.addEventListener('click', () => {
                     let q = parseInt(document.getElementById(`qty-${i}`).textContent);
-                    q++; document.getElementById(`qty-${i}`).textContent = q;
+                    q++;
+                    document.getElementById(`qty-${i}`).textContent = q;
                     note.style.display = q > 0 ? 'block' : 'none';
                 });
 
                 btnDec.addEventListener('click', () => {
                     let q = parseInt(document.getElementById(`qty-${i}`).textContent);
-                    if (q > 0) { q--; document.getElementById(`qty-${i}`).textContent = q; note.style.display = q > 0 ? 'block' : 'none'; if (q === 0) note.value = ''; }
+                    if (q > 0) {
+                        q--;
+                        document.getElementById(`qty-${i}`).textContent = q;
+                        note.style.display = q > 0 ? 'block' : 'none';
+                        if (q === 0) note.value = '';
+                    }
                 });
             });
 
@@ -358,22 +368,48 @@
 
                 loadingOverlay.style.display = 'flex';
 
-                // Hier stuur je bestelling naar de app/stripe voor betaling
-                await fetch(`${backendUrl}/create_payment_intent`, {
+                // 📦 Stuur bestelling + bedrag naar backend
+                const res = await fetch(`${backendUrl}/create_payment_intent`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderId, amount })
+                    body: JSON.stringify({
+                        orderId,
+                        amount,
+                        kiosk: selectedKiosk,
+                        items: bestelling,
+                        orderType: selectedOrderType
+                    })
                 });
 
-                alert('✅ Bestelling ontvangen! Wacht tot betaling bevestigd wordt in de app.');
-                cancelOrderBtn.click();
-                loadingOverlay.style.display = 'none';
+                if (!res.ok) throw new Error('Fout bij aanmaken betaling.');
+
+                alert('✅ Betaling gestart! Wacht tot betaling wordt bevestigd via de app.');
+
+                // 🔄 Wacht op bevestiging van betaling via SSE
+                const evtSource = new EventSource(`${backendUrl}/payment_confirmed`);
+                evtSource.onmessage = function (event) {
+                    const data = JSON.parse(event.data);
+                    if (data.orderId === orderId) {
+                        alert("✅ Betaling bevestigd! Bestelling wordt nu klaargemaakt.");
+                        evtSource.close();
+                        loadingOverlay.style.display = 'none';
+                        cancelOrderBtn.click();
+                    }
+                };
+
+                evtSource.onerror = function () {
+                    console.error("❌ SSE-verbinding verbroken.");
+                    evtSource.close();
+                };
+
             } catch (err) {
                 loadingOverlay.style.display = 'none';
-                alert('⛔ Fout bij betaling.'); console.error(err);
+                alert('⛔ Fout bij betaling.');
+                console.error(err);
             }
         });
     </script>
+
 </body>
 </html>
 
