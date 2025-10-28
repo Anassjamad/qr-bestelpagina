@@ -230,6 +230,7 @@
         <div class="spinner"></div>
         <div style="font-size:1.2rem;color:#333;">Wachten op betaling...</div>
     </div>
+
     <div class="container">
         <h2>Bestel je producten</h2>
         <div id="kioskDisplay" style="margin-bottom: 20px; font-weight: bold;"></div>
@@ -362,13 +363,16 @@
 
         orderForm.addEventListener('submit', async e => {
             e.preventDefault();
+            if (bestelling.length === 0) return;
+
             try {
                 const orderId = `order_${Date.now()}`;
                 const amount = Math.round(bestelling.reduce((sum, p) => sum + p.quantity * p.prijs, 0) * 100);
 
+                // Overlay tonen
                 loadingOverlay.style.display = 'flex';
 
-                // 📦 Stuur bestelling + bedrag naar backend
+                // Enkel bestelling POSTen naar backend
                 const res = await fetch(`${backendUrl}/create_payment_intent`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -383,9 +387,7 @@
 
                 if (!res.ok) throw new Error('Fout bij aanmaken betaling.');
 
-                alert('✅ Betaling gestart! Wacht tot betaling wordt bevestigd via de app.');
-
-                // 🔄 Wacht op bevestiging van betaling via SSE
+                // Wacht op app via SSE of backend dat betaling bevestigd is
                 const evtSource = new EventSource(`${backendUrl}/payment_confirmed`);
                 evtSource.onmessage = function (event) {
                     const data = JSON.parse(event.data);
@@ -409,7 +411,5 @@
             }
         });
     </script>
-
 </body>
 </html>
-
