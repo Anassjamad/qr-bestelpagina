@@ -230,7 +230,6 @@
         <div class="spinner"></div>
         <div style="font-size:1.2rem;color:#333;">Wachten op betaling...</div>
     </div>
-
     <div class="container">
         <h2>Bestel je producten</h2>
         <div id="kioskDisplay" style="margin-bottom: 20px; font-weight: bold;"></div>
@@ -297,16 +296,16 @@
                 const div = document.createElement('div');
                 div.className = 'product';
                 div.innerHTML = `
-                            <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
-                            <h3>${product.naam}</h3>
-                            <p>€${product.prijs.toFixed(2)}</p>
-                            <div class="product-controls">
-                                <button data-index="${i}" class="btn-decrease">-</button>
-                                <span id="qty-${i}">0</span>
-                                <button data-index="${i}" class="btn-increase">+</button>
-                            </div>
-                            <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
-                        `;
+                        <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
+                        <h3>${product.naam}</h3>
+                        <p>€${product.prijs.toFixed(2)}</p>
+                        <div class="product-controls">
+                            <button data-index="${i}" class="btn-decrease">-</button>
+                            <span id="qty-${i}">0</span>
+                            <button data-index="${i}" class="btn-increase">+</button>
+                        </div>
+                        <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
+                    `;
                 productsContainer.appendChild(div);
 
                 const btnInc = div.querySelector('.btn-increase');
@@ -363,16 +362,13 @@
 
         orderForm.addEventListener('submit', async e => {
             e.preventDefault();
-            if (bestelling.length === 0) return;
-
             try {
                 const orderId = `order_${Date.now()}`;
                 const amount = Math.round(bestelling.reduce((sum, p) => sum + p.quantity * p.prijs, 0) * 100);
 
-                // Overlay tonen
                 loadingOverlay.style.display = 'flex';
 
-                // Enkel bestelling POSTen naar backend
+                // 📦 Stuur bestelling + bedrag naar backend
                 const res = await fetch(`${backendUrl}/create_payment_intent`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -387,8 +383,10 @@
 
                 if (!res.ok) throw new Error('Fout bij aanmaken betaling.');
 
-                // Wacht op app via SSE of backend dat betaling bevestigd is
-                const evtSource = new EventSource(`${backendUrl}/payment_status?kiosk=${selectedKiosk}`);
+                alert('✅ Betaling gestart! Wacht tot betaling wordt bevestigd via de app.');
+
+                // 🔄 Wacht op bevestiging van betaling via SSE
+                const evtSource = new EventSource(`${backendUrl}/payment_confirmed`);
                 evtSource.onmessage = function (event) {
                     const data = JSON.parse(event.data);
                     if (data.orderId === orderId) {
@@ -407,9 +405,11 @@
             } catch (err) {
                 loadingOverlay.style.display = 'none';
                 alert('⛔ Fout bij betaling.');
-                co
-    </script>nsole.error(err);
+                console.error(err);
             }
         });
+    </script>
+
 </body>
 </html>
+
