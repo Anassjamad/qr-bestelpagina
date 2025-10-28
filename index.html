@@ -296,16 +296,16 @@
                 const div = document.createElement('div');
                 div.className = 'product';
                 div.innerHTML = `
-                    <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
-                    <h3>${product.naam}</h3>
-                    <p>€${product.prijs.toFixed(2)}</p>
-                    <div class="product-controls">
-                        <button data-index="${i}" class="btn-decrease">-</button>
-                        <span id="qty-${i}">0</span>
-                        <button data-index="${i}" class="btn-increase">+</button>
-                    </div>
-                    <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
-                `;
+                        <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
+                        <h3>${product.naam}</h3>
+                        <p>€${product.prijs.toFixed(2)}</p>
+                        <div class="product-controls">
+                            <button data-index="${i}" class="btn-decrease">-</button>
+                            <span id="qty-${i}">0</span>
+                            <button data-index="${i}" class="btn-increase">+</button>
+                        </div>
+                        <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
+                    `;
                 productsContainer.appendChild(div);
 
                 const btnInc = div.querySelector('.btn-increase');
