@@ -256,6 +256,8 @@
         let selectedOrderType = null;
         let producten = [];
         let bestelling = [];
+        let activeSSE = null;
+        let currentOrderId = null;
 
         const btnPickup = document.getElementById('btnPickup');
         const btnTakeaway = document.getElementById('btnTakeaway');
@@ -278,12 +280,10 @@
         async function loadProducts() {
             try {
                 const res = await fetch(`${backendUrl}/products`);
-                if (!res.ok) throw new Error('Kan producten niet ophalen.');
                 producten = await res.json();
                 showProducts();
             } catch (error) {
                 alert('⛔ Kan producten niet ophalen.');
-                console.error(error);
             }
         }
 
@@ -292,65 +292,68 @@
             productsContainer.style.display = 'flex';
             productsContainer.innerHTML = '';
 
-            producten.forEach((product, i) => {
+            producten.forEach((p, i) => {
                 const div = document.createElement('div');
                 div.className = 'product';
                 div.innerHTML = `
-                        <img src="${product.image || 'https://via.placeholder.com/100'}" alt="${product.naam}">
-                        <h3>${product.naam}</h3>
-                        <p>€${product.prijs.toFixed(2)}</p>
+                        <img src="${p.image || 'https://via.placeholder.com/100'}" alt="${p.naam}">
+                        <h3>${p.naam}</h3>
+                        <p>€${p.prijs.toFixed(2)}</p>
                         <div class="product-controls">
-                            <button data-index="${i}" class="btn-decrease">-</button>
+                            <button data-index="${i}" class="btn-dec">-</button>
                             <span id="qty-${i}">0</span>
-                            <button data-index="${i}" class="btn-increase">+</button>
+                            <button data-index="${i}" class="btn-inc">+</button>
                         </div>
-                        <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>
-                    `;
+                        <textarea placeholder="Opmerking (optioneel)" class="opmerking" id="note-${i}"></textarea>`;
                 productsContainer.appendChild(div);
 
-                const btnInc = div.querySelector('.btn-increase');
-                const btnDec = div.querySelector('.btn-decrease');
+                const inc = div.querySelector('.btn-inc');
+                const dec = div.querySelector('.btn-dec');
                 const note = div.querySelector('textarea');
 
-                btnInc.addEventListener('click', () => {
-                    let q = parseInt(document.getElementById(`qty-${i}`).textContent);
-                    q++;
-                    document.getElementById(`qty-${i}`).textContent = q;
+                inc.addEventListener('click', () => {
+                    let q = +document.getElementById(`qty-${i}`).textContent;
+                    document.getElementById(`qty-${i}`).textContent = ++q;
                     note.style.display = q > 0 ? 'block' : 'none';
                 });
-
-                btnDec.addEventListener('click', () => {
-                    let q = parseInt(document.getElementById(`qty-${i}`).textContent);
+                dec.addEventListener('click', () => {
+                    let q = +document.getElementById(`qty-${i}`).textContent;
                     if (q > 0) {
-                        q--;
-                        document.getElementById(`qty-${i}`).textContent = q;
+                        document.getElementById(`qty-${i}`).textContent = --q;
                         note.style.display = q > 0 ? 'block' : 'none';
                         if (q === 0) note.value = '';
                     }
                 });
             });
 
-            const btnNext = document.createElement('button');
-            btnNext.textContent = 'Verder naar bestelling';
-            btnNext.style.cssText = 'margin-top:20px;padding:16px;font-size:1.2rem;width:100%;background-color:#4caf50;color:white;border:none;border-radius:15px;cursor:pointer;';
-            productsContainer.appendChild(btnNext);
-            btnNext.addEventListener('click', e => { e.preventDefault(); prepareOrderForm(); });
+            const next = document.createElement('button');
+            next.textContent = 'Verder naar bestelling';
+            next.style.cssText = 'margin-top:20px;padding:16px;font-size:1.2rem;width:100%;background:#4caf50;color:white;border:none;border-radius:15px;';
+            productsContainer.appendChild(next);
+            next.addEventListener('click', e => { e.preventDefault(); prepareOrderForm(); });
         }
 
         function prepareOrderForm() {
             bestelling = [];
             producten.forEach((p, i) => {
-                const qty = parseInt(document.getElementById(`qty-${i}`).textContent);
+                const qty = +document.getElementById(`qty-${i}`).textContent;
                 const note = document.getElementById(`note-${i}`).value.trim();
                 if (qty > 0) bestelling.push({ item: p.naam, quantity: qty, opmerking: note || '', prijs: p.prijs });
             });
-            if (bestelling.length === 0) { alert('Selecteer minimaal één product.'); return; }
+            if (bestelling.length === 0) return alert('Selecteer minimaal één product.');
             productsContainer.style.display = 'none';
             orderForm.style.display = 'block';
-            orderItemsDiv.innerHTML = bestelling.map(p => `<p><strong>${p.item}</strong> x ${p.quantity} ${p.opmerking ? '- ' + p.opmerking : ''}</p>`).join('');
+            orderItemsDiv.innerHTML = bestelling.map(p => `<p><strong>${p.item}</strong> x ${p.quantity}</p>`).join('');
         }
 
-        cancelOrderBtn.addEventListener('click', () => {
+        cancelOrderBtn.addEventListener('click', async () => {
+            if (currentOrderId) {
+                await fetch(`${backendUrl}/api/frontend/cancel-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: currentOrderId })
+                });
+            }
             orderForm.style.display = 'none';
             productsContainer.style.display = 'none';
             document.getElementById('orderTypeSelection').style.display = 'flex';
@@ -358,58 +361,57 @@
             btnPickup.classList.remove('selected');
             btnTakeaway.classList.remove('selected');
             bestelling = [];
+            currentOrderId = null;
+            if (activeSSE) activeSSE.close();
+            loadingOverlay.style.display = 'none';
         });
 
         orderForm.addEventListener('submit', async e => {
             e.preventDefault();
             try {
-                const orderId = `order_${Date.now()}`;
+                const orderId = 'ORD-' + Date.now();
+                currentOrderId = orderId;
                 const amount = Math.round(bestelling.reduce((sum, p) => sum + p.quantity * p.prijs, 0) * 100);
 
                 loadingOverlay.style.display = 'flex';
 
-                // 📦 Stuur bestelling + bedrag naar backend
-                const res = await fetch(`${backendUrl}/create_payment_intent`, {
+                const res = await fetch(`${backendUrl}/api/frontend/start-payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        orderId,
-                        amount,
-                        kiosk: selectedKiosk,
-                        items: bestelling,
-                        orderType: selectedOrderType
-                    })
+                    body: JSON.stringify({ orderId, amount, kiosk: selectedKiosk, orderType: selectedOrderType })
                 });
+                if (!res.ok) throw new Error('Fout bij starten betaling.');
 
-                if (!res.ok) throw new Error('Fout bij aanmaken betaling.');
-
-                alert('✅ Betaling gestart! Wacht tot betaling wordt bevestigd via de app.');
-
-                // 🔄 Wacht op bevestiging van betaling via SSE
-                const evtSource = new EventSource(`${backendUrl}/payment_confirmed`);
-                evtSource.onmessage = function (event) {
-                    const data = JSON.parse(event.data);
+                // ✅ Luister naar SSE-updates (van backend/app)
+                activeSSE = new EventSource(`${backendUrl}/payment_intent_created`);
+                activeSSE.onmessage = ev => {
+                    const data = JSON.parse(ev.data);
                     if (data.orderId === orderId) {
-                        alert("✅ Betaling bevestigd! Bestelling wordt nu klaargemaakt.");
-                        evtSource.close();
-                        loadingOverlay.style.display = 'none';
-                        cancelOrderBtn.click();
+                        if (data.status === 'paid') {
+                            alert('✅ Betaling geslaagd! Bestelling wordt klaargemaakt.');
+                            activeSSE.close();
+                            loadingOverlay.style.display = 'none';
+                            cancelOrderBtn.click();
+                        } else if (data.status === 'failed') {
+                            alert('❌ Betaling mislukt.');
+                            activeSSE.close();
+                            loadingOverlay.style.display = 'none';
+                        } else if (data.status === 'cancelled') {
+                            alert('❌ Betaling geannuleerd.');
+                            activeSSE.close();
+                            loadingOverlay.style.display = 'none';
+                        }
                     }
                 };
 
-                evtSource.onerror = function () {
-                    console.error("❌ SSE-verbinding verbroken.");
-                    evtSource.close();
-                };
+                alert('💳 Betaling gestart — wacht tot de app de betaling afrondt.');
 
             } catch (err) {
                 loadingOverlay.style.display = 'none';
-                alert('⛔ Fout bij betaling.');
+                alert('⛔ Fout bij starten betaling.');
                 console.error(err);
             }
         });
     </script>
-
 </body>
 </html>
-
