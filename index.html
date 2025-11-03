@@ -1,432 +1,654 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-  <title>Kiosk – Bestellen</title>
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root{
-      --bg:#f4fdf7;
-      --fg:#0b1a12;
-      --brand:#4caf50;
-      --brand-600:#43a047;
-      --brand-700:#388e3c;
-      --danger:#b71c1c;
-      --muted:#8aa398;
-      --card:#ffffff;
-      --shadow:0 10px 30px rgba(0,0,0,.10);
-      --radius:18px;
-      --radius-sm:12px;
-      --radius-lg:28px;
-      --elev:0 15px 40px rgba(56,142,60,.25);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      font-family:'Rubik',sans-serif;
-      margin:0; background:var(--bg); color:var(--fg);
-      overflow-x:hidden; -webkit-font-smoothing:antialiased;
-    }
-    .wrap{
-      width:100%; max-width:1200px; margin:0 auto; padding:24px;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Kiosk – Bestellen</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #f4fdf7;
+            --fg: #0b1a12;
+            --brand: #4caf50;
+            --brand-600: #43a047;
+            --brand-700: #388e3c;
+            --muted: #7a8f85;
+            --card: #ffffff;
+            --danger: #b71c1c;
+            --shadow: 0 10px 30px rgba(0,0,0,.10);
+            --elev: 0 18px 40px rgba(56,142,60,.25);
+            --radius: 18px;
+            --radius-lg: 26px;
+            --gap: 22px;
+        }
 
-    /* Top bar */
-    .top{
-      display:flex; align-items:center; justify-content:space-between;
-      margin-bottom:20px;
-    }
-    .brand{
-      display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.2px;
-    }
-    .brand .dot{width:14px; height:14px; border-radius:50%; background:var(--brand); box-shadow:0 0 0 6px rgba(76,175,80,.12)}
-    .badge{
-      background:rgba(76,175,80,.12); color:var(--brand-700);
-      padding:10px 14px; border-radius:14px; font-weight:600; font-size:15px;
-    }
+        * {
+            box-sizing: border-box
+        }
 
-    /* Stage cards */
-    .stage{
-      display:grid; grid-template-columns:1fr 1fr; gap:22px;
-      margin-top:12px; margin-bottom:26px;
-    }
-    .stage .card{
-      background:var(--card); border-radius:var(--radius);
-      padding:26px; box-shadow:var(--shadow);
-      display:flex; align-items:center; justify-content:center; gap:14px;
-      font-size:30px; font-weight:700; cursor:pointer; user-select:none;
-      min-height:130px; transform:translateY(10px); opacity:0; animation:pop .6s ease forwards;
-    }
-    .stage .card svg{width:36px; height:36px}
-    .card:active{transform:scale(.98)}
-    .card.pickup{background:linear-gradient(0deg,#fff, #fff) padding-box,
-                 linear-gradient(120deg, rgba(76,175,80,.25), rgba(56,142,60,.35)) border-box;
-                 border:2px solid transparent;}
-    .card.takeaway{background:linear-gradient(0deg,#fff,#fff) padding-box,
-                   linear-gradient(120deg, rgba(76,175,80,.25), rgba(56,142,60,.35)) border-box;
-                   border:2px solid transparent;}
-    .card.selected{box-shadow:var(--elev)}
-    .note{color:var(--muted); font-size:15px; margin-top:-6px; margin-bottom:8px;}
+        html, body {
+            height: 100%
+        }
 
-    /* Grid products */
-    .grid{
-      display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; margin-top:8px;
-    }
-    .product{
-      background:var(--card); border-radius:var(--radius); padding:18px;
-      box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px;
-      transform:translateY(12px); opacity:0; animation:rise .5s ease forwards;
-    }
-    .p-img{width:100%; height:170px; border-radius:14px; object-fit:cover; background:#e8efe9}
-    .p-name{font-weight:700; font-size:20px}
-    .p-price{font-weight:700; color:var(--brand-700)}
-    .qty{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      background:#f1fbf4; border-radius:12px; padding:10px 12px;
-    }
-    .qty .controls{display:flex; gap:10px; align-items:center}
-    .btn-icon{
-      width:44px; height:44px; border-radius:12px; border:none; cursor:pointer;
-      display:grid; place-items:center; background:var(--brand); color:#fff; font-size:22px; font-weight:700;
-      transition:transform .08s ease;
-    }
-    .btn-icon:active{transform:scale(.96)}
-    .note-input{
-      width:100%; padding:12px 14px; border-radius:12px; border:1.5px solid #e1eee4; font-size:15px; display:none;
-    }
+        body {
+            margin: 0;
+            font-family: 'Rubik',sans-serif;
+            color: var(--fg);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
 
-    /* Bottom action bar */
-    .bar{
-      position:sticky; bottom:0; left:0; right:0; padding:14px 24px; margin-top:18px;
-      background:linear-gradient(180deg, rgba(244,253,247,.0), rgba(244,253,247,1) 35%);
-      backdrop-filter:saturate(1.2);
-    }
-    .bar .inner{
-      max-width:1200px; margin:0 auto; background:#ffffff; border-radius:var(--radius-lg);
-      box-shadow:var(--elev); padding:14px; display:flex; gap:12px; align-items:center; justify-content:space-between;
-    }
-    .pill{display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:999px; background:#f1fbf4; color:#276f2b; font-weight:700}
-    .primary{
-      border:none; padding:16px 24px; border-radius:16px; background:var(--brand);
-      font-size:18px; color:#fff; font-weight:800; cursor:pointer; min-width:260px;
-      box-shadow:0 8px 22px rgba(76,175,80,.35);
-    }
-    .primary:active{transform:translateY(1px)}
+        /* Header */
+        .top {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
 
-    /* Drawer / Overzicht */
-    .drawer{
-      position:fixed; right:24px; top:24px; width:420px; max-width:92vw;
-      background:#ffffff; border-radius:22px; box-shadow:0 30px 60px rgba(0,0,0,.25);
-      padding:18px; display:none; z-index:30;
-      animation:fadeIn .25s ease forwards;
-    }
-    .drawer h3{margin:6px 0 8px 0}
-    .line{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px dashed #e6efe9}
-    .muted{color:var(--muted); font-size:14px}
-    .pay{
-      display:flex; gap:10px; margin-top:10px;
-    }
-    .ghost{
-      border:2px solid #e2efe6; padding:14px 16px; border-radius:14px; background:#fff; font-weight:700; cursor:pointer; flex:1;
-    }
-    .pay .primary{flex:2}
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+        }
 
-    /* Loading overlay */
-    .overlay{
-      position:fixed; inset:0; background:rgba(255,255,255,.92); display:none; z-index:50;
-      align-items:center; justify-content:center; flex-direction:column; gap:20px;
-      animation:fadeIn .2s ease forwards;
-    }
-    .spinner{
-      width:88px; height:88px; border-radius:999px; border:10px solid #eaf5ec; border-top-color:var(--brand);
-      animation:spin 1s linear infinite;
-    }
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--brand);
+            box-shadow: 0 0 0 6px rgba(76,175,80,.12)
+        }
 
-    /* Toast */
-    .toast{
-      position:fixed; left:50%; transform:translateX(-50%);
-      bottom:24px; background:var(--fg); color:#fff; padding:14px 18px; border-radius:12px; font-weight:600; display:none; z-index:60;
-      box-shadow:0 12px 30px rgba(0,0,0,.25);
-      animation:fadeIn .2s ease forwards;
-    }
+        .badge {
+            background: rgba(76,175,80,.12);
+            color: var(--brand-700);
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-weight: 600;
+        }
 
-    /* Animations */
-    @keyframes spin{to{transform:rotate(360deg)}}
-    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    @keyframes pop{from{opacity:0; transform:translateY(18px) scale(.98)} to{opacity:1; transform:translateY(0) scale(1)}}
-    @keyframes rise{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:translateY(0)}}
+        /* Screens wrapper */
+        .viewport {
+            position: relative;
+            width: 100vw;
+            height: calc(100vh - 64px);
+            overflow: hidden;
+        }
 
-    /* Responsive (smaller devices) */
-    @media (max-width:900px){
-      .grid{grid-template-columns:repeat(2,1fr)}
-      .stage{grid-template-columns:1fr}
-      .bar .inner{flex-direction:column; align-items:stretch; gap:10px}
-      .drawer{right:12px; left:12px; width:auto}
-    }
-  </style>
+        .screen {
+            position: absolute;
+            inset: 0;
+            padding: 22px;
+            overflow: auto;
+            background: var(--bg);
+            transform: translateX(100%);
+            transition: transform .35s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+            .screen.active {
+                transform: translateX(0)
+            }
+
+            .screen.left {
+                transform: translateX(-100%)
+            }
+
+        /* Reusable UI */
+        h1, h2 {
+            margin: 0;
+            color: var(--brand-700)
+        }
+
+        .subtitle {
+            color: var(--muted)
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: var(--gap)
+        }
+
+        .btn {
+            border: none;
+            padding: 18px 22px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform .08s ease, box-shadow .18s ease, background .18s ease;
+            will-change: transform;
+        }
+
+            .btn:active {
+                transform: scale(.98)
+            }
+
+        .btn-primary {
+            background: var(--brand);
+            color: #fff;
+            box-shadow: 0 12px 26px rgba(76,175,80,.35)
+        }
+
+            .btn-primary:hover {
+                background: var(--brand-600)
+            }
+
+        .btn-ghost {
+            background: #fff;
+            border: 2px solid #e3efe7
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff
+        }
+
+        .bar {
+            position: sticky;
+            bottom: 0;
+            padding-top: 10px;
+            background: linear-gradient(180deg, rgba(244,253,247,0), rgba(244,253,247,1) 32%);
+        }
+
+        .bar-inner {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--elev);
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: #eef9f0;
+            color: #2a6f2e;
+            font-weight: 700
+        }
+
+        /* Screen 1: order type */
+        .choices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--gap);
+            margin-top: 8px
+        }
+
+        .choice {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            text-align: center;
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            font-size: 28px;
+            font-weight: 800;
+            min-height: 140px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .2s, box-shadow .2s, background .2s;
+        }
+
+            .choice:active {
+                transform: scale(.98)
+            }
+
+            .choice.selected {
+                background: #e8f5e9;
+                box-shadow: var(--elev)
+            }
+
+        /* Screen 2: products */
+        .product {
+            background: #fff;
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .p-img {
+            width: 100%;
+            height: 180px;
+            border-radius: 14px;
+            object-fit: cover;
+            background: #e4eee6
+        }
+
+        .p-name {
+            font-weight: 800;
+            font-size: 20px
+        }
+
+        .p-price {
+            font-weight: 800;
+            color: var(--brand-700)
+        }
+
+        .qty {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #eef9f0;
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+
+        .btn-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            border: none;
+            background: var(--brand);
+            color: #fff;
+            font-size: 22px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform .08s ease;
+        }
+
+            .btn-icon:active {
+                transform: scale(.95)
+            }
+
+        .note {
+            display: none;
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1.5px solid #e1eee4;
+            font-size: 15px
+        }
+
+        /* Screen 3: overview */
+        .card {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--elev);
+            padding: 18px
+        }
+
+        .line {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px dashed #e6efe9
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 14px
+        }
+
+        /* Screen 4: payment */
+        .center {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 18px
+        }
+
+        .spinner {
+            width: 92px;
+            height: 92px;
+            border-radius: 999px;
+            border: 10px solid #eaf5ec;
+            border-top-color: var(--brand);
+            animation: spin 1s linear infinite;
+        }
+
+        /* Screen 5: thanks */
+        .huge {
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--brand-700);
+            text-align: center
+        }
+
+        .orderid {
+            font-size: 20px;
+            color: #2b3d34;
+            text-align: center
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 22px;
+            background: #0b1a12;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            display: none;
+            z-index: 40;
+            box-shadow: 0 16px 30px rgba(0,0,0,.25);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        @media(max-width:1024px) {
+            .grid {
+                grid-template-columns: repeat(2,1fr)
+            }
+
+            .choices {
+                grid-template-columns: 1fr
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
+    <!-- Header -->
     <div class="top">
-      <div class="brand">
-        <span class="dot"></span>
-        <div>OA Logica – Bestellen</div>
-      </div>
-      <div id="kioskBadge" class="badge">Kiosk #–</div>
+        <div class="brand"><span class="dot"></span><div>OA Logica – Bestellen</div></div>
+        <div id="kioskBadge" class="badge">Kiosk #–</div>
     </div>
 
-    <!-- Order type -->
-    <div class="note">Kies hoe je wilt bestellen</div>
-    <div class="stage" id="orderTypeStage">
-      <div id="btnPickup" class="card pickup">
-        <!-- Fork & knife icon -->
-        <svg viewBox="0 0 24 24" fill="none"><path d="M6 2v9M10 2v9M8 2v9M6 11c0 2 2 3 2 3s2-1 2-3M14 3h2v8h-2M20 3h-2v8c0 2-2 3-2 3" stroke="#388e3c" stroke-width="2" stroke-linecap="round"/></svg>
-        Ter plaatse eten
-      </div>
-      <div id="btnTakeaway" class="card takeaway">
-        <!-- Bag icon -->
-        <svg viewBox="0 0 24 24" fill="none"><path d="M6 7h12l-1 13H7L6 7Z" stroke="#388e3c" stroke-width="2"/><path d="M9 7a3 3 0 0 1 6 0" stroke="#388e3c" stroke-width="2" stroke-linecap="round"/></svg>
-        Afhalen
-      </div>
-    </div>
-
-    <!-- Producten -->
-    <div id="productsWrap" style="display:none">
-      <h2 style="margin:8px 0 6px 0;">Kies je producten</h2>
-      <div id="products" class="grid"></div>
-      <div class="bar">
-        <div class="inner">
-          <div class="pill">
-            <span id="cartCount">0</span> items •
-            <span id="cartTotal" style="font-weight:800;">€0,00</span>
-          </div>
-          <button id="btnOverview" class="primary">Verder naar overzicht</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Drawer / Overzicht -->
-    <div id="drawer" class="drawer">
-      <h3>Overzicht</h3>
-      <div id="summary"></div>
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:12px;">
-        <div class="pill"><span id="sumCount">0</span> items • <span id="sumTotal" style="font-weight:800;">€0,00</span></div>
-      </div>
-      <div class="pay">
-        <button id="btnBack" class="ghost">Terug</button>
-        <button id="btnPay" class="primary">Betalen</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Overlays -->
-  <div id="loading" class="overlay">
-    <div class="spinner"></div>
-    <div style="font-size:1.15rem">Wachten op betaling...</div>
-  </div>
-  <div id="toast" class="toast"></div>
-
-  <script>
-    const backendUrl = 'https://bestel-backend.onrender.com';
-
-    // --- Helpers ---
-    const € = v => (v/100).toLocaleString('nl-NL',{style:'currency',currency:'EUR'});
-    const show = el => el.style.display = '';
-    const hide = el => el.style.display = 'none';
-    const toast = (msg, ms=2000) => {
-      const t = document.getElementById('toast'); t.textContent = msg; show(t);
-      setTimeout(()=>hide(t), ms);
-    };
-
-    // --- State ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const kiosk = parseInt(urlParams.get('kiosk'),10) || 0;
-    document.getElementById('kioskBadge').textContent = `Kiosk #${kiosk || '–'}`;
-    if(!kiosk){ alert('⛔ Kiosknummer ontbreekt (?kiosk=1)'); }
-
-    let orderType = null;
-    let producten = [];
-    let cart = []; // {id, naam, prijs_cents, qty, note}
-    let currentOrderId = null;
-    let sse = null;
-
-    // --- UI refs ---
-    const stage = document.getElementById('orderTypeStage');
-    const btnPickup = document.getElementById('btnPickup');
-    const btnTakeaway = document.getElementById('btnTakeaway');
-    const productsWrap = document.getElementById('productsWrap');
-    const productsGrid = document.getElementById('products');
-    const drawer = document.getElementById('drawer');
-    const summary = document.getElementById('summary');
-    const cartCount = document.getElementById('cartCount');
-    const cartTotal = document.getElementById('cartTotal');
-    const sumCount = document.getElementById('sumCount');
-    const sumTotal = document.getElementById('sumTotal');
-    const loading = document.getElementById('loading');
-
-    // --- Order type ---
-    btnPickup.onclick = () => chooseType('pickup', btnPickup);
-    btnTakeaway.onclick = () => chooseType('takeaway', btnTakeaway);
-
-    function chooseType(type, el){
-      orderType = type;
-      btnPickup.classList.remove('selected');
-      btnTakeaway.classList.remove('selected');
-      el.classList.add('selected');
-      loadProducts();
-    }
-
-    // --- Load products ---
-    async function loadProducts(){
-      try{
-        const res = await fetch(`${backendUrl}/products`);
-        producten = await res.json();
-        renderProducts();
-        hide(stage);
-        show(productsWrap);
-      }catch(e){
-        toast('⛔ Kan producten niet laden');
-      }
-    }
-
-    function renderProducts(){
-      productsGrid.innerHTML = '';
-      producten.forEach((p, idx)=>{
-        const priceCents = Math.round((p.prijs || 0)*100);
-        const card = document.createElement('div');
-        card.className = 'product';
-        card.style.animationDelay = (idx*50)+'ms';
-        card.innerHTML = `
-          <img class="p-img" src="${p.image || 'https://via.placeholder.com/600x400?text=Product'}" alt="${p.naam}">
-          <div class="p-name">${p.naam}</div>
-          <div class="p-price">${€(priceCents)}</div>
-          <div class="qty">
-            <div class="controls">
-              <button class="btn-icon dec">−</button>
-              <div class="q" id="q-${idx}" style="min-width:36px; text-align:center; font-weight:800;">0</div>
-              <button class="btn-icon inc">+</button>
+    <div class="viewport" id="viewport">
+        <!-- Screen 1: Ordertype -->
+        <section class="screen active" id="s1">
+            <h2>Kies je bestelmethode</h2>
+            <div class="subtitle">Maak een keuze om verder te gaan</div>
+            <div class="choices">
+                <div id="btnPickup" class="choice">🍽️ Ter plaatse eten</div>
+                <div id="btnTakeaway" class="choice">🛍️ Afhalen</div>
             </div>
-            <button class="btn-icon add" title="Toevoegen">+</button>
-          </div>
-          <textarea class="note-input" id="note-${idx}" placeholder="Opmerking (optioneel)"></textarea>
-        `;
-        const inc = card.querySelector('.inc');
-        const dec = card.querySelector('.dec');
-        const add = card.querySelector('.add');
-        const qEl = card.querySelector(`#q-${idx}`);
-        const note = card.querySelector(`#note-${idx}`);
+        </section>
 
-        inc.onclick = ()=>{ qEl.textContent = (+qEl.textContent)+1; note.style.display = (+qEl.textContent>0)?'block':'none'; };
-        dec.onclick = ()=>{ const q=Math.max(0,(+qEl.textContent)-1); qEl.textContent = q; note.style.display = (q>0)?'block':'none'; if(q===0) note.value=''; };
-        add.onclick = ()=>{
-          const qty = +qEl.textContent || 1;
-          upsertCart({ id: idx, naam: p.naam, prijs_cents: priceCents, qty, note: (qty>0?note.value.trim():'') });
-          qEl.textContent = 0; note.value=''; note.style.display='none';
-          toast('Toegevoegd aan bestelling');
+        <!-- Screen 2: Producten -->
+        <section class="screen" id="s2">
+            <h2>Kies je producten</h2>
+            <div id="products" class="grid"></div>
+
+            <div class="bar">
+                <div class="bar-inner">
+                    <div class="pill"><span id="cartCount">0</span> items • <span id="cartTotal" style="font-weight:800;">€0,00</span></div>
+                    <button id="toOverview" class="btn btn-primary">Verder naar overzicht</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 3: Overzicht -->
+        <section class="screen" id="s3">
+            <h2>Overzicht</h2>
+            <div class="card" id="summary"></div>
+
+            <div class="bar">
+                <div class="bar-inner">
+                    <button id="backToProducts" class="btn btn-ghost">Terug</button>
+                    <div class="pill"><span id="sumCount">0</span> items • <span id="sumTotal" style="font-weight:800;">€0,00</span></div>
+                    <button id="pay" class="btn btn-primary">Betalen</button>
+                </div>
+            </div>
+
+            <div style="margin-top:8px">
+                <button id="cancel" class="btn btn-danger" style="width:100%">Annuleer bestelling</button>
+            </div>
+        </section>
+
+        <!-- Screen 4: Betaling bezig -->
+        <section class="screen" id="s4">
+            <div class="center">
+                <div class="spinner"></div>
+                <div style="font-size:18px">Wachten op betaling...</div>
+            </div>
+        </section>
+
+        <!-- Screen 5: Bedankt -->
+        <section class="screen" id="s5">
+            <div class="center" style="gap:10px">
+                <div class="huge">Bedankt voor uw bestelling! 🎉</div>
+                <div id="thanksOrderId" class="orderid">Order: —</div>
+                <button id="nextCustomer" class="btn btn-primary" style="min-width:280px; margin-top:8px">Volgende klant</button>
+                <div class="subtitle" style="margin-top:6px">We gaan direct voor u aan de slag.</div>
+            </div>
+        </section>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ====== Config & helpers ======
+        const backendUrl = 'https://bestel-backend.onrender.com';
+        const kiosk = parseInt(new URLSearchParams(location.search).get('kiosk'), 10) || 0;
+        document.getElementById('kioskBadge').textContent = `Kiosk #${kiosk || '–'}`;
+        if (!kiosk) { alert('⛔ Kiosknummer ontbreekt (?kiosk=1)'); }
+
+        const € = v => (v / 100).toLocaleString('nl-NL', { style: 'currency', currency: 'EUR' });
+        const toast = (msg, ms = 1800) => {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', ms);
         };
-        productsGrid.appendChild(card);
-      });
-    }
 
-    function upsertCart(item){
-      if(item.qty<=0) return;
-      const i = cart.findIndex(x=> x.id===item.id && (x.note||'')===(item.note||''));
-      if(i>-1){ cart[i].qty += item.qty; }
-      else{ cart.push(item); }
-      syncCartUI();
-    }
+        // ====== Navigation (slide screens) ======
+        const screens = ['s1', 's2', 's3', 's4', 's5'].map(id => document.getElementById(id));
+        let idx = 0;
+        function go(to) {
+            screens.forEach((el, i) => {
+                el.classList.remove('left', 'active');
+                if (i < to) el.classList.add('left');
+                if (i === to) el.classList.add('active');
+            });
+            idx = to;
+        }
 
-    function syncCartUI(){
-      const count = cart.reduce((s,x)=>s+x.qty,0);
-      const total = cart.reduce((s,x)=>s+(x.prijs_cents*x.qty),0);
-      cartCount.textContent = count;
-      cartTotal.textContent = €(total);
-      sumCount.textContent = count;
-      sumTotal.textContent = €(total);
-    }
+        // ====== State ======
+        let orderType = null;
+        let producten = [];
+        let cart = []; // {id, naam, prijs_cents, qty, note}
+        let currentOrderId = null;
+        let sse = null;
+        let thanksTimer = null;
 
-    // --- Overzicht (drawer) ---
-    document.getElementById('btnOverview').onclick = ()=> {
-      if(!cart.length) return toast('Voeg eerst items toe');
-      renderSummary();
-      show(drawer);
-    };
-    document.getElementById('btnBack').onclick = ()=> hide(drawer);
+        // ====== Screen 1: choose order type ======
+        const btnPickup = document.getElementById('btnPickup');
+        const btnTakeaway = document.getElementById('btnTakeaway');
+        btnPickup.onclick = () => { orderType = 'pickup'; btnPickup.classList.add('selected'); btnTakeaway.classList.remove('selected'); loadProducts(); };
+        btnTakeaway.onclick = () => { orderType = 'takeaway'; btnTakeaway.classList.add('selected'); btnPickup.classList.remove('selected'); loadProducts(); };
 
-    function renderSummary(){
-      summary.innerHTML = '';
-      cart.forEach((x,idx)=>{
-        const row = document.createElement('div');
-        row.className='line';
-        row.innerHTML = `
-          <div>
-            <div style="font-weight:700">${x.naam} <span class="muted">×${x.qty}</span></div>
-            ${x.note? `<div class="muted">Opmerking: ${x.note}</div>`:''}
-          </div>
-          <div style="font-weight:800">${€(x.prijs_cents*x.qty)}</div>
-        `;
-        summary.appendChild(row);
-      });
-    }
+        // ====== Screen 2: products ======
+        const productsEl = document.getElementById('products');
+        const cartCount = document.getElementById('cartCount');
+        const cartTotal = document.getElementById('cartTotal');
+        const btnOverview = document.getElementById('toOverview');
 
-    // --- Pay flow ---
-    document.getElementById('btnPay').onclick = async ()=>{
-      if(!cart.length) return;
-      const amount = cart.reduce((s,x)=>s+(x.prijs_cents*x.qty),0);
-      const orderId = `ORD-${Date.now()}`;
-      currentOrderId = orderId;
+        async function loadProducts() {
+            try {
+                const res = await fetch(`${backendUrl}/products`);
+                producten = await res.json();
+                renderProducts();
+                go(1);
+            } catch (e) { toast('⛔ Kan producten niet laden'); }
+        }
 
-      try{
-        show(loading);
-        // start payment
-        const res = await fetch(`${backendUrl}/api/frontend/start-payment`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ orderId, amount, kiosk, orderType })
-        });
-        if(!res.ok) throw new Error('start-payment failed');
+        function renderProducts() {
+            productsEl.innerHTML = '';
+            producten.forEach((p, i) => {
+                const priceCents = Math.round((p.prijs || 0) * 100);
+                const card = document.createElement('div');
+                card.className = 'product';
+                card.innerHTML = `
+              <img class="p-img" src="${p.image || 'https://via.placeholder.com/600x400?text=Product'}" alt="${p.naam}">
+              <div class="p-name">${p.naam}</div>
+              <div class="p-price">${€(priceCents)
+            }</div >
+              <div class="qty">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <button class="btn-icon dec">−</button>
+                  <div class="q" style="min-width:36px;text-align:center;font-weight:900">0</div>
+                  <button class="btn-icon inc">+</button>
+                </div>
+                <button class="btn-icon add" title="Toevoegen">+</button>
+              </div>
+              <textarea class="note" placeholder="Opmerking (optioneel)"></textarea>
+            `;
+            const qEl   = card.querySelector('.q');
+            const note  = card.querySelector('.note');
+            card.querySelector('.inc').onclick = ()=>{ qEl.textContent = (+qEl.textContent)+1; note.style.display = (+qEl.textContent>0)?'block':'none' };
+            card.querySelector('.dec').onclick = ()=>{ const q=Math.max(0,(+qEl.textContent)-1); qEl.textContent=q; note.style.display=(q>0)?'block':'none'; if(q===0) note.value=''; };
+            card.querySelector('.add').onclick = ()=>{
+              const qty = (+qEl.textContent)||1;
+              upsertCart({ id:i, naam:p.naam, prijs_cents:priceCents, qty, note: (qty>0?note.value.trim():'') });
+              qEl.textContent = 0; note.value=''; note.style.display='none';
+              toast('Toegevoegd aan bestelling');
+            };
+            productsEl.appendChild(card);
+          });
+          syncCartUI();
+        }
 
-        // open SSE
-        if(sse) sse.close();
-        sse = new EventSource(`${backendUrl}/payment_intent_created`);
-        sse.onmessage = (ev)=>{
-          const data = JSON.parse(ev.data||'{}');
-          if(data.orderId !== orderId) return;
-          if(data.status==='paid'){
-            toast('✅ Betaling geslaagd');
-            cleanupFlow();
-          }else if(data.status==='failed'){
-            toast('❌ Betaling mislukt');
-            hide(loading);
-            sse.close();
-          }else if(data.status==='cancelled'){
-            toast('❌ Betaling geannuleerd');
-            hide(loading);
-            sse.close();
+        function upsertCart(item){
+          if(item.qty<=0) return;
+          const k = cart.findIndex(x=> x.id===item.id && (x.note||'')===(item.note||''));
+          if(k>-1) cart[k].qty += item.qty; else cart.push(item);
+          syncCartUI();
+        }
+        function syncCartUI(){
+          const count = cart.reduce((s,x)=>s+x.qty,0);
+          const total = cart.reduce((s,x)=>s+(x.prijs_cents*x.qty),0);
+          cartCount.textContent = count;
+          cartTotal.textContent = €(total);
+          document.getElementById('sumCount').textContent = count;
+          document.getElementById('sumTotal').textContent = €(total);
+        }
+
+        btnOverview.onclick = ()=>{
+          if(!cart.length){ toast('Voeg eerst items toe'); return; }
+          renderSummary();
+          go(2);
+        };
+
+        // ====== Screen 3: overview ======
+        const summaryEl = document.getElementById('summary');
+        const backToProducts = document.getElementById('backToProducts');
+        const payBtn = document.getElementById('pay');
+        const cancelBtn = document.getElementById('cancel');
+
+        function renderSummary(){
+          summaryEl.innerHTML = '';
+          cart.forEach(x=>{
+            const row = document.createElement('div');
+            row.className = 'line';
+            row.innerHTML = `
+                < div >
+                <div style="font-weight:800">${x.naam} <span class="muted">×${x.qty}</span></div>
+                ${ x.note ? `<div class="muted">Opmerking: ${x.note}</div>` : '' }
+              </div >
+                <div style="font-weight:900">${€(x.prijs_cents*x.qty)}</div>
+            `;
+            summaryEl.appendChild(row);
+          });
+        }
+
+        backToProducts.onclick = ()=> go(1);
+
+        cancelBtn.onclick = async ()=>{
+          if(currentOrderId){
+            try{
+              await fetch(`${ backendUrl } / api / frontend / cancel - payment`,{
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ orderId: currentOrderId })
+              });
+            }catch{}
+          }
+          resetFlow();
+        };
+
+        // ====== Pay flow ======
+        payBtn.onclick = async ()=>{
+          if(!cart.length) return;
+          const amount = cart.reduce((s,x)=>s+(x.prijs_cents*x.qty),0);
+          const orderId = `ORD - ${ Date.now() }`;
+          currentOrderId = orderId;
+
+          try{
+            go(3); // naar payment screen
+            // Start betaling
+            const res = await fetch(`${ backendUrl } / api / frontend / start - payment`,{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({ orderId, amount, kiosk, orderType })
+            });
+            if(!res.ok) throw new Error('start-payment failed');
+
+            // SSE luisteren op status
+            if(sse) sse.close();
+            sse = new EventSource(`${ backendUrl } / payment_intent_created`);
+            sse.onmessage = (ev)=>{
+              const data = JSON.parse(ev.data||'{}');
+              if(data.orderId !== orderId) return;
+              if(data.status==='paid'){
+                sse.close();
+                showThanks(orderId);
+              }else if(data.status==='failed'){
+                sse.close();
+                toast('❌ Betaling mislukt'); go(2);
+              }else if(data.status==='cancelled'){
+                sse.close();
+                toast('❌ Betaling geannuleerd'); go(2);
+              }
+            };
+
+          }catch(e){
+            toast('⛔ Fout bij starten betaling'); go(2);
           }
         };
 
-      }catch(e){
-        toast('⛔ Fout bij starten betaling'); hide(loading);
-      }
-    };
+        // ====== Screen 5: thanks + auto reset ======
+        const thanksIdEl = document.getElementById('thanksOrderId');
+        const nextBtn = document.getElementById('nextCustomer');
+        nextBtn.onclick = ()=> resetFlow();
 
-    function cleanupFlow(){
-      // reset UI
-      hide(loading); hide(drawer);
-      cart=[]; syncCartUI();
-      // terug naar type keuze voor volgende klant
-      hide(document.getElementById('productsWrap'));
-      document.getElementById('products').innerHTML='';
-      show(stage);
-      btnPickup.classList.remove('selected'); btnTakeaway.classList.remove('selected');
-      orderType=null;
-      if(sse) sse.close();
-    }
+        function showThanks(orderId){
+          thanksIdEl.textContent = `Order: ${ orderId }`;
+          go(4);
+          if(thanksTimer) clearTimeout(thanksTimer);
+          thanksTimer = setTimeout(()=> resetFlow(), 10000); // auto reset 10 sec
+        }
 
-    // Fail-safe: sluit SSE bij unload
-    window.addEventListener('beforeunload', ()=>{ if(sse) sse.close(); });
-  </script>
+        // ====== Reset ======
+        function resetFlow(){
+          if(sse) { try{sse.close()}catch{} sse=null; }
+          if(thanksTimer) { clearTimeout(thanksTimer); thanksTimer=null; }
+          orderType = null; producten = []; cart = []; currentOrderId = null;
+          productsEl.innerHTML=''; summaryEl.innerHTML='';
+          screens.forEach(s=>{ s.scrollTop=0; });
+          btnPickup.classList.remove('selected'); btnTakeaway.classList.remove('selected');
+          syncCartUI();
+          go(0);
+        }
+
+        // Fail-safe
+        window.addEventListener('beforeunload', ()=>{ if(sse) sse.close(); });
+    </script>
 </body>
 </html>
+
